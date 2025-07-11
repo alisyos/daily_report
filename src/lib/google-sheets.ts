@@ -73,7 +73,7 @@ class GoogleSheetsService {
       const rows = response.data.values || [];
       const employees = await this.getEmployees();
       
-      return rows.map((row: any[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      return rows.map((row: string[]) => {
         const employee = employees.find(emp => emp.employeeName === row[1]);
         return {
           date: row[0] || '',
@@ -156,7 +156,7 @@ class GoogleSheetsService {
       });
 
       const rows = response.data.values || [];
-      return rows.map((row: any[]) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+      return rows.map((row: string[]) => ({
         employeeCode: row[0] || '',
         employeeName: row[1] || '',
         position: row[2] || '',

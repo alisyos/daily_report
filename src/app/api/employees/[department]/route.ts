@@ -5,11 +5,12 @@ const sheetsService = new GoogleSheetsService();
 
 export async function GET(
   request: Request,
-  { params }: { params: { department: string } }
+  { params }: { params: Promise<{ department: string }> }
 ) {
   try {
-    const department = decodeURIComponent(params.department);
-    const employees = await sheetsService.getEmployeesByDepartment(department);
+    const { department } = await params;
+    const decodedDepartment = decodeURIComponent(department);
+    const employees = await sheetsService.getEmployeesByDepartment(decodedDepartment);
     return NextResponse.json(employees);
   } catch (error) {
     console.error('Error fetching employees by department:', error);
