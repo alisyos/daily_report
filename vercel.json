@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "GOOGLE_SHEETS_ID": "@google-sheets-id",
+    "GOOGLE_SERVICE_ACCOUNT_EMAIL": "@google-service-account-email",
+    "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY": "@google-service-account-private-key",
+    "GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL": "@google-service-account-client-email"
+  }
+}
