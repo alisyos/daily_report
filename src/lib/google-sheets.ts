@@ -35,32 +35,55 @@ class GoogleSheetsService {
   private spreadsheetId: string;
 
   constructor() {
-    // Initialize Google Sheets API
-    let auth;
-    
-    if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE) {
-      // For local development with key file
-      auth = new google.auth.GoogleAuth({
-        keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-      });
-    } else {
-      // For production with environment variables
-      auth = new google.auth.GoogleAuth({
-        credentials: {
-          type: 'service_account',
-          project_id: process.env.GOOGLE_SERVICE_ACCOUNT_PROJECT_ID,
-          private_key_id: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID,
-          private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-          client_email: process.env.GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL,
-          client_id: process.env.GOOGLE_SERVICE_ACCOUNT_CLIENT_ID,
-        },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-      });
+    try {
+      // Initialize Google Sheets API
+      let auth;
+      
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE) {
+        // For local development with key file
+        auth = new google.auth.GoogleAuth({
+          keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE,
+          scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+      } else {
+        // For production with environment variables
+        const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+          ?.replace(/\\n/g, '\n')  // Convert \n to actual newlines
+          ?.replace(/^"|"$/g, '')  // Remove quotes from beginning and end
+          ?.trim();
+
+        // Debug logging (remove in production)
+        console.log('Environment variables check:');
+        console.log('GOOGLE_SHEETS_ID:', process.env.GOOGLE_SHEETS_ID ? 'SET' : 'NOT SET');
+        console.log('GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL:', process.env.GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL ? 'SET' : 'NOT SET');
+        console.log('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY length:', privateKey?.length || 0);
+        console.log('Private key starts with:', privateKey?.substring(0, 50) || 'EMPTY');
+
+        if (!privateKey || !process.env.GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_ID) {
+          throw new Error('Missing required Google Sheets environment variables');
+        }
+
+        auth = new google.auth.GoogleAuth({
+          credentials: {
+            type: 'service_account',
+            project_id: process.env.GOOGLE_SERVICE_ACCOUNT_PROJECT_ID,
+            private_key_id: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID,
+            private_key: privateKey,
+            client_email: process.env.GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL,
+            client_id: process.env.GOOGLE_SERVICE_ACCOUNT_CLIENT_ID,
+          },
+          scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+      }
+      
+      this.sheets = google.sheets({ version: 'v4', auth });
+      this.spreadsheetId = process.env.GOOGLE_SHEETS_ID || '';
+      
+      console.log('Google Sheets service initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Google Sheets service:', error);
+      throw error;
     }
-    
-    this.sheets = google.sheets({ version: 'v4', auth });
-    this.spreadsheetId = process.env.GOOGLE_SHEETS_ID || '';
   }
 
   async getDailyReports(): Promise<DailyReport[]> {
