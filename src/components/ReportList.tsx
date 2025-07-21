@@ -353,12 +353,16 @@ export default function ReportList() {
                 border-collapse: collapse;
                 margin-bottom: 20px;
                 font-size: 10px;
+                table-layout: fixed;
               }
               th, td {
                 border: 1px solid #999;
                 padding: 6px;
                 text-align: left;
                 color: #000;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                white-space: pre-wrap;
               }
               th {
                 background-color: #e6e6e6;
@@ -366,6 +370,13 @@ export default function ReportList() {
                 text-align: center;
                 font-size: 11px;
               }
+              .col-dept { width: 9%; }
+              .col-name { width: 8%; }
+              .col-work { width: 23%; }
+              .col-goal { width: 23%; }
+              .col-rate { width: 10%; }
+              .col-remarks { width: 18%; }
+              .col-eval { width: 18%; }
               .dept-header {
                 background-color: #d4edda !important;
                 font-weight: bold;
@@ -423,12 +434,16 @@ export default function ReportList() {
               border-collapse: collapse;
               margin-bottom: 20px;
               font-size: 10px;
+              table-layout: fixed;
             }
             th, td {
               border: 1px solid #999;
               padding: 6px;
               text-align: left;
               color: #000;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
+              white-space: pre-wrap;
             }
             th {
               background-color: #e6e6e6;
@@ -436,6 +451,13 @@ export default function ReportList() {
               text-align: center;
               font-size: 11px;
             }
+            .col-dept { width: 9%; }
+            .col-name { width: 8%; }
+            .col-work { width: 23%; }
+            .col-goal { width: 23%; }
+            .col-rate { width: 10%; }
+            .col-remarks { width: 18%; }
+            .col-eval { width: 18%; }
             .dept-header {
               background-color: #d4edda !important;
               font-weight: bold;
@@ -485,20 +507,20 @@ export default function ReportList() {
           ${reportDate && reportSummary ? `
             <div class="summary">
               <h3>일일보고요약</h3>
-              <p>${reportSummary.summary}</p>
+              <p style="white-space: pre-wrap;">${reportSummary.summary}</p>
             </div>
           ` : ''}
 
           <table>
             <thead>
               <tr>
-                <th>부서명</th>
-                <th>사원명</th>
-                <th>업무</th>
-                <th>진행목표</th>
-                <th>달성률</th>
-                <th>비고</th>
-                <th>팀장평가</th>
+                <th class="col-dept">부서명</th>
+                <th class="col-name">사원명</th>
+                <th class="col-work">업무</th>
+                <th class="col-goal">진행목표</th>
+                <th class="col-rate">달성률</th>
+                <th class="col-remarks">비고</th>
+                <th class="col-eval">팀장평가</th>
               </tr>
             </thead>
             <tbody>
@@ -514,13 +536,13 @@ export default function ReportList() {
                   </tr>
                   ${deptReports.map(report => `
                     <tr class="no-break">
-                      <td>${report.department}</td>
-                      <td>${report.employeeName}</td>
-                      <td>${report.workOverview}</td>
-                      <td>${report.progressGoal}</td>
-                      <td class="center">${report.achievementRate}%</td>
-                      <td>${report.remarks || '-'}</td>
-                      <td>${report.managerEvaluation || '-'}</td>
+                      <td class="col-dept">${report.department}</td>
+                      <td class="col-name">${report.employeeName}</td>
+                      <td class="col-work">${report.workOverview}</td>
+                      <td class="col-goal">${report.progressGoal}</td>
+                      <td class="col-rate center">${report.achievementRate}%</td>
+                      <td class="col-remarks">${report.remarks || '-'}</td>
+                      <td class="col-eval">${report.managerEvaluation || '-'}</td>
                     </tr>
                   `).join('')}
                 `;
@@ -681,7 +703,7 @@ export default function ReportList() {
             ) : (
               <div className="text-sm text-gray-700">
                 {dailySummary ? (
-                  <p className="whitespace-pre-wrap">{dailySummary.summary}</p>
+                  <p className="whitespace-pre-wrap break-words">{dailySummary.summary}</p>
                 ) : (
                   <p className="text-gray-500 italic">일일보고요약이 작성되지 않았습니다.</p>
                 )}
@@ -690,32 +712,32 @@ export default function ReportList() {
           </div>
         )}
 
-        <div className="overflow-x-auto" ref={tableRef}>
-          <table className="min-w-full divide-y divide-gray-200">
+        <div ref={tableRef}>
+          <table className="w-full divide-y divide-gray-200" style={{ tableLayout: 'fixed', borderCollapse: 'collapse' }}>
             <thead className="bg-gray-200">
               <tr>
-                <th className="px-3 py-3 text-left text-sm font-bold text-gray-800 uppercase tracking-wider w-24">
+                <th className="px-3 py-3 text-center text-sm font-bold text-gray-800 uppercase tracking-wider" style={{ width: '9%' }}>
                   부서명
                 </th>
-                <th className="px-3 py-3 text-left text-sm font-bold text-gray-800 uppercase tracking-wider w-20">
+                <th className="px-3 py-3 text-center text-sm font-bold text-gray-800 uppercase tracking-wider" style={{ width: '8%' }}>
                   사원명
                 </th>
-                <th className="px-3 py-3 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-sm font-bold text-gray-800 uppercase tracking-wider" style={{ width: '23%' }}>
                   업무
                 </th>
-                <th className="px-3 py-3 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-sm font-bold text-gray-800 uppercase tracking-wider" style={{ width: '23%' }}>
                   진행 목표
                 </th>
-                <th className="px-3 py-3 text-left text-sm font-bold text-gray-800 uppercase tracking-wider w-24">
+                <th className="px-3 py-3 text-center text-sm font-bold text-gray-800 uppercase tracking-wider" style={{ width: '10%' }}>
                   달성률
                 </th>
-                <th className="px-3 py-3 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-sm font-bold text-gray-800 uppercase tracking-wider" style={{ width: '18%' }}>
                   비고
                 </th>
-                <th className="px-3 py-3 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-sm font-bold text-gray-800 uppercase tracking-wider" style={{ width: '18%' }}>
                   팀장평가
                 </th>
-                <th className="px-3 py-3 text-left text-sm font-bold text-gray-800 uppercase tracking-wider w-16">
+                <th className="px-3 py-3 text-center text-sm font-bold text-gray-800 uppercase tracking-wider" style={{ width: '6%' }}>
                   수정
                 </th>
               </tr>
@@ -734,29 +756,33 @@ export default function ReportList() {
                      </tr>
                      {deptReports.map((report, index) => (
                        <tr key={`${dept}-${index}`} className="hover:bg-gray-50">
-                         <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
-                           {report.department}
+                         <td className="px-3 py-2 text-sm text-gray-900" style={{ width: '9%', verticalAlign: 'top' }}>
+                           <div className="truncate" title={report.department}>
+                             {report.department}
+                           </div>
                          </td>
-                         <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
-                           {report.employeeName}
+                         <td className="px-3 py-2 text-sm text-gray-900" style={{ width: '8%', verticalAlign: 'top' }}>
+                           <div className="truncate" title={report.employeeName}>
+                             {report.employeeName}
+                           </div>
                          </td>
-                         <td className={`px-3 py-2 text-sm ${report.workOverview === '작성 안됨' ? 'text-gray-500 italic' : 'text-gray-900'}`}>
-                           <div className="max-w-xs">
+                         <td className={`px-3 py-2 text-sm ${report.workOverview === '작성 안됨' ? 'text-gray-500 italic' : 'text-gray-900'}`} style={{ width: '23%', verticalAlign: 'top' }}>
+                           <div className="break-words whitespace-pre-wrap" style={{ lineHeight: '1.4', wordWrap: 'break-word' }} title={report.workOverview}>
                              {report.workOverview}
                            </div>
                          </td>
-                         <td className={`px-3 py-2 text-sm ${report.progressGoal === '-' ? 'text-gray-500' : 'text-gray-900'}`}>
-                           <div className="max-w-xs">
+                         <td className={`px-3 py-2 text-sm ${report.progressGoal === '-' ? 'text-gray-500' : 'text-gray-900'}`} style={{ width: '23%', verticalAlign: 'top' }}>
+                           <div className="break-words whitespace-pre-wrap" style={{ lineHeight: '1.4', wordWrap: 'break-word' }} title={report.progressGoal}>
                              {report.progressGoal}
                            </div>
                          </td>
-                         <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                         <td className="px-3 py-2 text-sm text-gray-900" style={{ width: '10%', verticalAlign: 'top' }}>
                            {report.workOverview === '작성 안됨' ? (
                              <span className="text-gray-500 text-sm">-</span>
                            ) : (
                              <div className="flex items-center">
-                               <span className="text-sm font-medium">{report.achievementRate}%</span>
-                               <div className="w-16 bg-gray-200 rounded-full h-2 ml-2">
+                               <span className="text-sm font-medium mr-1 text-xs">{report.achievementRate}%</span>
+                               <div className="flex-1 bg-gray-200 rounded-full h-2">
                                  <div
                                    className="bg-blue-600 h-2 rounded-full"
                                    style={{ width: `${Math.min(report.achievementRate, 100)}%` }}
@@ -765,23 +791,24 @@ export default function ReportList() {
                              </div>
                            )}
                          </td>
-                         <td className={`px-3 py-2 text-sm ${report.remarks === '작성 안됨' ? 'text-gray-500 italic' : 'text-gray-900'}`}>
-                           <div className="max-w-xs">
+                         <td className={`px-3 py-2 text-sm ${report.remarks === '작성 안됨' ? 'text-gray-500 italic' : 'text-gray-900'}`} style={{ width: '18%', verticalAlign: 'top' }}>
+                           <div className="break-words whitespace-pre-wrap" style={{ lineHeight: '1.4', wordWrap: 'break-word' }} title={report.remarks || '-'}>
                              {report.remarks || '-'}
                            </div>
                          </td>
-                         <td className={`px-3 py-2 text-sm ${report.managerEvaluation === '-' ? 'text-gray-500' : 'text-gray-900'}`}>
-                           <div className="max-w-xs">
+                         <td className={`px-3 py-2 text-sm ${report.managerEvaluation === '-' ? 'text-gray-500' : 'text-gray-900'}`} style={{ width: '18%', verticalAlign: 'top' }}>
+                           <div className="break-words whitespace-pre-wrap" style={{ lineHeight: '1.4', wordWrap: 'break-word' }} title={report.managerEvaluation || '-'}>
                              {report.managerEvaluation || '-'}
                            </div>
                          </td>
-                         <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                         <td className="px-3 py-2 text-sm text-gray-900" style={{ width: '6%', verticalAlign: 'top' }}>
                            {report.workOverview === '작성 안됨' ? (
                              <span className="text-gray-400 text-sm">-</span>
                            ) : (
                              <button
                                onClick={() => handleEdit(report)}
-                               className="text-blue-600 hover:text-blue-900 font-medium"
+                               className="text-blue-600 hover:text-blue-900 font-medium text-xs"
+                               title="수정"
                              >
                                수정
                              </button>
