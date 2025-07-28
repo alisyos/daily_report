@@ -335,19 +335,10 @@ export default function DailyReportForm() {
       if (response.ok) {
         const result = await response.json();
         setSubmitMessage(result.message);
-        // Reset form
-        setReports(employees.map(employee => ({
-          date: reportDate,
-          employeeName: employee.employeeName,
-          isOnLeave: false,
-          workItems: [{
-            workOverview: '',
-            progressGoal: '',
-            remarks: '',
-            achievementRate: '',
-            managerEvaluation: '',
-          }]
-        })));
+        // 등록 완료 후 등록된 내용을 확인할 수 있도록 데이터 새로고침
+        setTimeout(() => {
+          fetchExistingReports();
+        }, 1000);
       } else {
         const error = await response.json();
         setSubmitMessage(`오류: ${error.error}`);
