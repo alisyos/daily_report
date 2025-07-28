@@ -39,6 +39,8 @@ export default function ReportList() {
   const [summaryFormData, setSummaryFormData] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
 
   const departmentOrder = ['GPT 1팀', 'GPT 2팀', 'AI사업부', '개발팀'];
@@ -211,6 +213,40 @@ export default function ReportList() {
       }
     } catch (error) {
       console.error('Error updating report:', error);
+    }
+  };
+
+  const handleDeleteReport = async () => {
+    if (!editingReport) return;
+
+    setIsDeletingReport(true);
+    try {
+      const response = await fetch('/api/reports', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: editingReport.date,
+          employeeName: editingReport.employeeName,
+          workOverview: editingReport.workOverview,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchData();
+        setEditingReport(null);
+        setEditFormData(null);
+        setShowDeleteConfirm(false);
+      } else {
+        const error = await response.json();
+        alert(`삭제 실패: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      alert('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeletingReport(false);
     }
   };
 
@@ -747,7 +783,7 @@ export default function ReportList() {
                 const deptReports = groupedReports[dept];
                 if (!deptReports || deptReports.length === 0) return null;
 
-                                 return (
+                 return (
                    <React.Fragment key={dept}>
                      <tr className="bg-blue-50">
                        <td colSpan={8} className="px-3 py-2 text-sm font-semibold text-blue-900 border-b-2 border-blue-200">
@@ -840,6 +876,7 @@ export default function ReportList() {
                 onClick={() => {
                   setEditingReport(null);
                   setEditFormData(null);
+                  setShowDeleteConfirm(false);
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -920,21 +957,94 @@ export default function ReportList() {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 mt-6">
+            <div className="flex justify-between mt-6">
               <button
-                onClick={() => {
-                  setEditingReport(null);
-                  setEditFormData(null);
-                }}
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"
+                disabled={isDeletingReport}
+              >
+                삭제
+              </button>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setEditingReport(null);
+                    setEditFormData(null);
+                    setShowDeleteConfirm(false);
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                >
+                  저장
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 삭제 확인 다이얼로그 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-60">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-gray-900">보고서 삭제</h3>
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-500">
+                다음 보고서를 삭제하시겠습니까?
+              </p>
+              <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                <p className="text-sm font-medium text-gray-900">
+                  {editingReport?.employeeName} - {editingReport?.date}
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  업무: {editingReport?.workOverview}
+                </p>
+              </div>
+              <p className="text-sm text-red-600 mt-2">
+                ※ 삭제된 보고서는 복구할 수 없습니다.
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
                 className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                disabled={isDeletingReport}
               >
                 취소
               </button>
               <button
-                onClick={handleSaveEdit}
-                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                onClick={handleDeleteReport}
+                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center"
+                disabled={isDeletingReport}
               >
-                저장
+                {isDeletingReport ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    삭제 중...
+                  </>
+                ) : (
+                  '삭제'
+                )}
               </button>
             </div>
           </div>

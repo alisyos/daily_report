@@ -25,8 +25,18 @@ export async function POST(request: NextRequest) {
     // Validate each report
     for (const report of reports) {
       // Validate required fields
-      if (!report.date || !report.employeeName || !report.workOverview) {
-        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      if (!report.date || !report.employeeName) {
+        return NextResponse.json({ error: 'Missing required fields: date and employeeName' }, { status: 400 });
+      }
+      
+      // Check if at least one content field is provided (unless it's annual leave)
+      const hasContent = report.workOverview?.trim() || 
+                        report.progressGoal?.trim() || 
+                        report.remarks?.trim() || 
+                        report.managerEvaluation?.trim();
+      
+      if (report.workOverview !== '연차' && !hasContent) {
+        return NextResponse.json({ error: 'At least one field must be filled' }, { status: 400 });
       }
       
       // Validate achievement rate
@@ -88,5 +98,70 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Error updating report:', error);
     return NextResponse.json({ error: 'Failed to update report' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { date, employeeName, workOverview } = await request.json();
+    
+    if (!date || !employeeName) {
+      return NextResponse.json({ error: 'Missing required fields: date and employeeName' }, { status: 400 });
+    }
+    
+    // Get all reports to find the exact match
+    const allReports = await sheetsService.getDailyReports();
+    const reportToDelete = allReports.find((report: any) => 
+      report.date === date && 
+      report.employeeName === employeeName && 
+      report.workOverview === workOverview
+    );
+    
+    if (!reportToDelete) {
+      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+    }
+    
+    // Check if this employee has multiple reports on this date
+    const employeeReportsOnDate = allReports.filter((report: any) => 
+      report.date === date && report.employeeName === employeeName
+    );
+    
+    if (employeeReportsOnDate.length === 1) {
+      // If this is the only report for this employee on this date, delete it
+      const success = await sheetsService.deleteReportsByDateAndEmployees(date, [employeeName]);
+      
+      if (success) {
+        return NextResponse.json({ message: 'Report deleted successfully' });
+      } else {
+        return NextResponse.json({ error: 'Failed to delete report' }, { status: 500 });
+      }
+    } else {
+      // If there are multiple reports for this employee on this date,
+      // we'll recreate all reports except the one to delete
+      const reportsToKeep = employeeReportsOnDate.filter((report: any) =>
+        report.workOverview !== workOverview
+      );
+      
+      // First delete all reports for this employee on this date
+      const deleteSuccess = await sheetsService.deleteReportsByDateAndEmployees(date, [employeeName]);
+      
+      if (!deleteSuccess) {
+        return NextResponse.json({ error: 'Failed to delete reports' }, { status: 500 });
+      }
+      
+      // Then add back the reports we want to keep
+      if (reportsToKeep.length > 0) {
+        const addSuccess = await sheetsService.addDailyReports(reportsToKeep);
+        
+        if (!addSuccess) {
+          return NextResponse.json({ error: 'Failed to restore remaining reports' }, { status: 500 });
+        }
+      }
+      
+      return NextResponse.json({ message: 'Report deleted successfully' });
+    }
+  } catch (error) {
+    console.error('Error deleting report:', error);
+    return NextResponse.json({ error: 'Failed to delete report' }, { status: 500 });
   }
 }

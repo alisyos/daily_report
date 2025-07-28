@@ -29,6 +29,7 @@ export default function DailyReportForm() {
   const [departments, setDepartments] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [reportDate, setReportDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [reports, setReports] = useState<DailyReportFormData[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,14 +45,18 @@ export default function DailyReportForm() {
   useEffect(() => {
     if (selectedDepartment) {
       fetchEmployeesByDepartment(selectedDepartment);
+      setSelectedEmployees([]); // Reset selected employees when department changes
     }
   }, [selectedDepartment]);
 
   useEffect(() => {
-    if (employees.length > 0) {
+    if (selectedEmployees.length > 0) {
       fetchExistingReports();
+    } else {
+      setReports([]);
+      setHasExistingData(false);
     }
-  }, [employees, reportDate, selectedDepartment]);
+  }, [selectedEmployees, reportDate, selectedDepartment]);
 
   const fetchDepartments = async () => {
     try {
@@ -88,10 +93,14 @@ export default function DailyReportForm() {
       if (response.ok) {
         const allReports = await response.json();
         
-        // Filter reports for the selected date and department
+        // Filter reports for the selected date and selected employees
+        const selectedEmployeeObjects = employees.filter(emp => 
+          selectedEmployees.includes(emp.employeeName)
+        );
+        
         const existingReports = allReports.filter((report: any) => 
           report.date === reportDate && 
-          employees.some(emp => emp.employeeName === report.employeeName)
+          selectedEmployees.includes(report.employeeName)
         );
 
         if (existingReports.length > 0) {
@@ -106,7 +115,7 @@ export default function DailyReportForm() {
           }, {});
 
           // Create reports array with existing data
-          const newReports = employees.map(employee => {
+          const newReports = selectedEmployeeObjects.map(employee => {
             const employeeReports = reportsByEmployee[employee.employeeName] || [];
             
             if (employeeReports.length > 0) {
@@ -161,7 +170,7 @@ export default function DailyReportForm() {
           setReports(newReports);
         } else {
           // No existing reports, create empty forms
-          setReports(employees.map(employee => ({
+          setReports(selectedEmployeeObjects.map(employee => ({
             date: reportDate,
             employeeName: employee.employeeName,
             isOnLeave: false,
@@ -178,7 +187,10 @@ export default function DailyReportForm() {
     } catch (error) {
       console.error('Error fetching existing reports:', error);
       // Fallback to empty forms
-      setReports(employees.map(employee => ({
+      const selectedEmployeeObjects = employees.filter(emp => 
+        selectedEmployees.includes(emp.employeeName)
+      );
+      setReports(selectedEmployeeObjects.map(employee => ({
         date: reportDate,
         employeeName: employee.employeeName,
         isOnLeave: false,
@@ -282,26 +294,29 @@ export default function DailyReportForm() {
             remarks: '연차',
           }];
         } else {
-          // 일반 업무 보고
-          return report.workItems.map(workItem => ({
-            date: report.date,
-            employeeName: report.employeeName,
-            workOverview: workItem.workOverview,
-            progressGoal: workItem.progressGoal,
-            achievementRate: Number(workItem.achievementRate) || 0,
-            managerEvaluation: workItem.managerEvaluation,
-            remarks: workItem.remarks,
-          }));
+          // 일반 업무 보고 - 내용이 있는 workItem만 필터링
+          return report.workItems
+            .filter(workItem => 
+              workItem.workOverview.trim() || 
+              workItem.progressGoal.trim() || 
+              workItem.remarks.trim() || 
+              workItem.managerEvaluation.trim()
+            )
+            .map(workItem => ({
+              date: report.date,
+              employeeName: report.employeeName,
+              workOverview: workItem.workOverview,
+              progressGoal: workItem.progressGoal,
+              achievementRate: Number(workItem.achievementRate) || 0,
+              managerEvaluation: workItem.managerEvaluation,
+              remarks: workItem.remarks,
+            }));
         }
       });
 
-      // Validate all work items (exclude leave reports)
-      const invalidItems = flatReports.filter(item => 
-        item.workOverview !== '연차' && (!item.workOverview.trim() || !item.progressGoal.trim())
-      );
-
-      if (invalidItems.length > 0) {
-        setSubmitMessage('모든 업무와 진행 목표를 입력해주세요.');
+      // Validate that at least one report exists (either work report or leave report)
+      if (flatReports.length === 0) {
+        setSubmitMessage('저장할 내용이 없습니다. 최소 1개 이상의 항목을 입력하거나 연차를 체크해주세요.');
         setIsSubmitting(false);
         return;
       }
@@ -342,6 +357,24 @@ export default function DailyReportForm() {
       console.error('Error submitting reports:', error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEmployeeSelection = (employeeName: string, isSelected: boolean) => {
+    setSelectedEmployees(prev => {
+      if (isSelected) {
+        return [...prev, employeeName];
+      } else {
+        return prev.filter(name => name !== employeeName);
+      }
+    });
+  };
+
+  const handleSelectAllEmployees = () => {
+    if (selectedEmployees.length === employees.length) {
+      setSelectedEmployees([]);
+    } else {
+      setSelectedEmployees(employees.map(emp => emp.employeeName));
     }
   };
 
@@ -402,14 +435,46 @@ export default function DailyReportForm() {
         </div>
       )}
 
-      {selectedDepartment && !isLoadingEmployees && employees.length > 0 && isLoadingReports && (
+      {selectedDepartment && !isLoadingEmployees && employees.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700">
+              사원명 선택 ({selectedEmployees.length}/{employees.length}명)
+            </label>
+            <button
+              type="button"
+              onClick={handleSelectAllEmployees}
+              className="text-sm px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              {selectedEmployees.length === employees.length ? '전체 해제' : '전체 선택'}
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-40 overflow-y-auto">
+            {employees.map((employee) => (
+              <label key={employee.employeeCode} className="flex items-center space-x-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedEmployees.includes(employee.employeeName)}
+                  onChange={(e) => handleEmployeeSelection(employee.employeeName, e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="text-gray-700">
+                  {employee.employeeName} ({employee.position})
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {selectedEmployees.length > 0 && isLoadingReports && (
         <div className="flex justify-center items-center h-24">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-2 text-gray-600">기존 보고서 데이터를 불러오는 중...</span>
         </div>
       )}
 
-      {selectedDepartment && !isLoadingEmployees && employees.length > 0 && !isLoadingReports && (
+      {selectedEmployees.length > 0 && !isLoadingReports && (
         <form onSubmit={handleSubmit} className="space-y-4">
           {hasExistingData && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
@@ -421,7 +486,7 @@ export default function DailyReportForm() {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-blue-700">
-                    <strong>기존 데이터 수정 중:</strong> {reportDate} 날짜의 {selectedDepartment} 부서 보고서를 불러왔습니다.
+                    <strong>기존 데이터 수정 중:</strong> {reportDate} 날짜의 선택된 사원 보고서를 불러왔습니다.
                   </p>
                 </div>
               </div>
@@ -430,146 +495,149 @@ export default function DailyReportForm() {
 
           <div className="bg-gray-50 p-3 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              {selectedDepartment} 부서 ({employees.length}명 중 근무 {getActiveEmployees()}명, 연차 {getOnLeaveEmployees()}명, 총 {getTotalWorkItems()}개 업무)
+              {selectedDepartment} 부서 (선택된 {selectedEmployees.length}명 중 근무 {getActiveEmployees()}명, 연차 {getOnLeaveEmployees()}명, 총 {getTotalWorkItems()}개 업무)
             </h3>
             
             <div className="space-y-4">
-              {reports.map((report, employeeIndex) => (
-                <div key={employees[employeeIndex].employeeCode} className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <h4 className="text-lg font-semibold text-gray-800">
-                        {employees[employeeIndex].employeeName} ({employees[employeeIndex].position})
-                      </h4>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={report.isOnLeave}
-                          onChange={() => handleLeaveToggle(employeeIndex)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <span className="text-sm text-gray-600">연차</span>
-                      </label>
+              {reports.map((report, employeeIndex) => {
+                const employee = employees.find(emp => emp.employeeName === report.employeeName);
+                if (!employee) return null;
+                
+                return (
+                  <div key={employee.employeeCode} className="bg-white p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          {employee.employeeName} ({employee.position})
+                        </h4>
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={report.isOnLeave}
+                            onChange={() => handleLeaveToggle(employeeIndex)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <span className="text-sm text-gray-600">연차</span>
+                        </label>
+                      </div>
+                      {!report.isOnLeave && (
+                        <button
+                          type="button"
+                          onClick={() => addWorkItem(employeeIndex)}
+                          className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          + 업무 추가
+                        </button>
+                      )}
                     </div>
-                    {!report.isOnLeave && (
-                      <button
-                        type="button"
-                        onClick={() => addWorkItem(employeeIndex)}
-                        className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        + 업무 추가
-                      </button>
+                    
+                    {report.isOnLeave ? (
+                      <div className="text-center py-4 text-gray-500">
+                        연차로 인해 업무 보고서를 작성하지 않습니다.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {report.workItems.map((workItem, workItemIndex) => (
+                          <div key={workItemIndex} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <h5 className="text-sm font-medium text-gray-700">
+                                업무 #{workItemIndex + 1}
+                              </h5>
+                              {report.workItems.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeWorkItem(employeeIndex, workItemIndex)}
+                                  className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                >
+                                  삭제
+                                </button>
+                              )}
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {/* 업무 & 진행 목표 */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    업무
+                                  </label>
+                                  <textarea
+                                    value={workItem.workOverview}
+                                    onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'workOverview', e.target.value)}
+                                    rows={2}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="수행한 업무를 입력하세요"
+                                  />
+                                </div>
+                                
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    진행 목표
+                                  </label>
+                                  <textarea
+                                    value={workItem.progressGoal}
+                                    onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'progressGoal', e.target.value)}
+                                    rows={2}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="진행 목표를 입력하세요"
+                                  />
+                                </div>
+                              </div>
+                              
+                              {/* 달성률 */}
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    달성률 (%)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={workItem.achievementRate}
+                                    onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'achievementRate', e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    min="0"
+                                    placeholder="0"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </div>
+                              </div>
+                              
+                              {/* 비고 & 팀장 평가 */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    비고
+                                  </label>
+                                  <textarea
+                                    value={workItem.remarks}
+                                    onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'remarks', e.target.value)}
+                                    rows={2}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="추가 사항이나 특이사항을 입력하세요"
+                                  />
+                                </div>
+                                
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    팀장 평가
+                                  </label>
+                                  <textarea
+                                    value={workItem.managerEvaluation}
+                                    onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'managerEvaluation', e.target.value)}
+                                    rows={2}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="팀장 평가를 입력하세요"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  
-                  {report.isOnLeave ? (
-                    <div className="text-center py-4 text-gray-500">
-                      연차로 인해 업무 보고서를 작성하지 않습니다.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {report.workItems.map((workItem, workItemIndex) => (
-                        <div key={workItemIndex} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                          <div className="flex items-center justify-between mb-2">
-                            <h5 className="text-sm font-medium text-gray-700">
-                              업무 #{workItemIndex + 1}
-                            </h5>
-                            {report.workItems.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeWorkItem(employeeIndex, workItemIndex)}
-                                className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-                              >
-                                삭제
-                              </button>
-                            )}
-                          </div>
-                          
-                          <div className="space-y-2">
-                            {/* 업무 & 진행 목표 */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  업무 *
-                                </label>
-                                <textarea
-                                  value={workItem.workOverview}
-                                  onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'workOverview', e.target.value)}
-                                  required
-                                  rows={2}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  placeholder="수행한 업무를 입력하세요"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  진행 목표 *
-                                </label>
-                                <textarea
-                                  value={workItem.progressGoal}
-                                  onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'progressGoal', e.target.value)}
-                                  required
-                                  rows={2}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  placeholder="진행 목표를 입력하세요"
-                                />
-                              </div>
-                            </div>
-                            
-                            {/* 달성률 */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  달성률 (%)
-                                </label>
-                                <input
-                                  type="number"
-                                  value={workItem.achievementRate}
-                                  onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'achievementRate', e.target.value)}
-                                  onFocus={(e) => e.target.select()}
-                                  min="0"
-                                  placeholder="0"
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                            </div>
-                            
-                            {/* 비고 & 팀장 평가 */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  비고
-                                </label>
-                                <textarea
-                                  value={workItem.remarks}
-                                  onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'remarks', e.target.value)}
-                                  rows={2}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  placeholder="추가 사항이나 특이사항을 입력하세요"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  팀장 평가
-                                </label>
-                                <textarea
-                                  value={workItem.managerEvaluation}
-                                  onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'managerEvaluation', e.target.value)}
-                                  rows={2}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  placeholder="팀장 평가를 입력하세요"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -579,6 +647,7 @@ export default function DailyReportForm() {
               onClick={() => {
                 setSelectedDepartment('');
                 setEmployees([]);
+                setSelectedEmployees([]);
                 setReports([]);
                 setHasExistingData(false);
               }}
