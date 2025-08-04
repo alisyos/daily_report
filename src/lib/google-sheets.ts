@@ -30,6 +30,19 @@ export interface DailySummary {
   summary: string;
 }
 
+export interface Project {
+  id: string;
+  projectName: string;
+  department: string;
+  manager: string;
+  targetEndDate: string;
+  revisedEndDate: string;
+  status: string;
+  progressRate: number;
+  mainIssues: string;
+  detailedProgress: string;
+}
+
 class GoogleSheetsService {
   private sheets: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   private spreadsheetId: string;
@@ -413,6 +426,139 @@ class GoogleSheetsService {
     } catch (error) {
       console.error('Error updating daily summary:', error);
       return false;
+    }
+  }
+
+  async getProjects(): Promise<Project[]> {
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: '프로젝트관리!A2:J',
+      });
+
+      const rows = response.data.values || [];
+      return rows.map((row: string[], index: number) => ({
+        id: (index + 1).toString(),
+        projectName: row[0] || '',
+        department: row[1] || '',
+        manager: row[2] || '',
+        targetEndDate: row[3] || '',
+        revisedEndDate: row[4] || '',
+        status: row[5] || '진행중',
+        progressRate: parseInt(row[6]) || 0,
+        mainIssues: row[7] || '',
+        detailedProgress: row[8] || '',
+      }));
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      return [];
+    }
+  }
+
+  async addProject(project: Omit<Project, 'id'>): Promise<boolean> {
+    try {
+      const values = [
+        [
+          project.projectName,
+          project.department,
+          project.manager,
+          project.targetEndDate,
+          project.revisedEndDate,
+          project.status,
+          project.progressRate,
+          project.mainIssues,
+          project.detailedProgress,
+        ],
+      ];
+
+      await this.sheets.spreadsheets.values.append({
+        spreadsheetId: this.spreadsheetId,
+        range: '프로젝트관리!A:I',
+        valueInputOption: 'RAW',
+        resource: { values },
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error adding project:', error);
+      return false;
+    }
+  }
+
+  async updateProject(projectId: string, project: Omit<Project, 'id'>): Promise<boolean> {
+    try {
+      const values = [
+        [
+          project.projectName,
+          project.department,
+          project.manager,
+          project.targetEndDate,
+          project.revisedEndDate,
+          project.status,
+          project.progressRate,
+          project.mainIssues,
+          project.detailedProgress,
+        ],
+      ];
+
+      const rowIndex = parseInt(projectId) + 1; // projectId is 1-based, +1 for Google Sheets row number (first data row = A2)
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: this.spreadsheetId,
+        range: `프로젝트관리!A${rowIndex}:I${rowIndex}`,
+        valueInputOption: 'RAW',
+        resource: { values },
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error updating project:', error);
+      return false;
+    }
+  }
+
+  async deleteProject(projectId: string): Promise<boolean> {
+    try {
+      // projectId is 1-based from getProjects (first project = "1")
+      // Google Sheets data starts at A2 (row 2)
+      // deleteDimension startIndex is 0-based, so row 2 = startIndex 1
+      const startIndex = parseInt(projectId); // projectId "1" → startIndex 1 (row 2)
+      
+      await this.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: this.spreadsheetId,
+        resource: {
+          requests: [
+            {
+              deleteDimension: {
+                range: {
+                  sheetId: await this.getSheetId('프로젝트관리'),
+                  dimension: 'ROWS',
+                  startIndex: startIndex,
+                  endIndex: startIndex + 1,
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      return false;
+    }
+  }
+
+  private async getSheetId(sheetName: string): Promise<number> {
+    try {
+      const response = await this.sheets.spreadsheets.get({
+        spreadsheetId: this.spreadsheetId,
+      });
+
+      const sheet = response.data.sheets.find((s: any) => s.properties.title === sheetName);
+      return sheet?.properties?.sheetId || 0;
+    } catch (error) {
+      console.error('Error getting sheet ID:', error);
+      return 0;
     }
   }
 }

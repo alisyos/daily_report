@@ -121,7 +121,15 @@ export default function ReportList() {
       const aEmployeeCode = aEmployee?.employeeCode || '';
       const bEmployeeCode = bEmployee?.employeeCode || '';
       
-      return aEmployeeCode.localeCompare(bEmployeeCode);
+      // 사원 코드가 숫자인지 확인하고 적절한 정렬 방식 사용
+      const aIsNumber = !isNaN(Number(aEmployeeCode));
+      const bIsNumber = !isNaN(Number(bEmployeeCode));
+      
+      if (aIsNumber && bIsNumber) {
+        return Number(aEmployeeCode) - Number(bEmployeeCode);
+      } else {
+        return aEmployeeCode.localeCompare(bEmployeeCode);
+      }
     });
   };
 
@@ -968,9 +976,10 @@ export default function ReportList() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">달성률 (%)</label>
                   <input
                     type="number"
-                    value={editFormData.achievementRate}
-                    onChange={(e) => handleEditInputChange('achievementRate', Number(e.target.value))}
+                    value={editFormData.achievementRate === 0 ? '' : editFormData.achievementRate}
+                    onChange={(e) => handleEditInputChange('achievementRate', e.target.value === '' ? 0 : Number(e.target.value))}
                     min="0"
+                    placeholder="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
