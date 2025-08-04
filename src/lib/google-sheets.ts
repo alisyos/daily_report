@@ -52,12 +52,6 @@ class GoogleSheetsService {
           ?.replace(/^"|"$/g, '')  // Remove quotes from beginning and end
           ?.trim();
 
-        // Debug logging (remove in production)
-        console.log('Environment variables check:');
-        console.log('GOOGLE_SHEETS_ID:', process.env.GOOGLE_SHEETS_ID ? 'SET' : 'NOT SET');
-        console.log('GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL:', process.env.GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL ? 'SET' : 'NOT SET');
-        console.log('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY length:', privateKey?.length || 0);
-        console.log('Private key starts with:', privateKey?.substring(0, 50) || 'EMPTY');
 
         if (!privateKey || !process.env.GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_ID) {
           throw new Error('Missing required Google Sheets environment variables');
@@ -78,8 +72,6 @@ class GoogleSheetsService {
       
       this.sheets = google.sheets({ version: 'v4', auth });
       this.spreadsheetId = process.env.GOOGLE_SHEETS_ID || '';
-      
-      console.log('Google Sheets service initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Google Sheets service:', error);
       throw error;

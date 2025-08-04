@@ -29,7 +29,7 @@ export default function ReportList() {
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
-  const [filterDate, setFilterDate] = useState('');
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterEmployee, setFilterEmployee] = useState('');
   const [editingReport, setEditingReport] = useState<DailyReport | null>(null);
@@ -41,6 +41,9 @@ export default function ReportList() {
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeletingReport, setIsDeletingReport] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
   const tableRef = useRef<HTMLTableElement>(null);
 
   const departmentOrder = ['GPT 1팀', 'GPT 2팀', 'AI사업부', '개발팀'];
@@ -66,13 +69,6 @@ export default function ReportList() {
       if (reportsResponse.ok) {
         const reportsData = await reportsResponse.json();
         setReports(reportsData);
-        
-        // Set the most recent report date as default filter
-        if (reportsData.length > 0) {
-          const sortedDates = [...new Set(reportsData.map((report: DailyReport) => report.date))].sort().reverse();
-          const mostRecentDate = sortedDates[0] as string;
-          setFilterDate(mostRecentDate);
-        }
       }
 
       if (employeesResponse.ok) {
@@ -293,6 +289,37 @@ export default function ReportList() {
       }
     } catch (error) {
       console.error('Error saving summary:', error);
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    if (!filterDate) return;
+
+    setIsGeneratingSummary(true);
+    try {
+      const response = await fetch('/api/summary/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ date: filterDate }),
+      });
+
+      if (response.ok) {
+        await fetchDailySummary(filterDate);
+        setModalMessage('AI 요약이 성공적으로 생성되었습니다.');
+        setShowSuccessModal(true);
+      } else {
+        const error = await response.json();
+        setModalMessage(`요약 생성 실패: ${error.error}`);
+        setShowSuccessModal(true);
+      }
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      setModalMessage('요약 생성 중 오류가 발생했습니다.');
+      setShowSuccessModal(true);
+    } finally {
+      setIsGeneratingSummary(false);
     }
   };
 
@@ -703,12 +730,25 @@ export default function ReportList() {
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-md font-semibold text-yellow-900">일일보고요약</h4>
               {!isEditingSummary && (
-                <button
-                  onClick={handleEditSummary}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  {dailySummary ? '수정' : '작성'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleGenerateSummary}
+                    disabled={isGeneratingSummary}
+                    className={`text-sm font-medium px-3 py-1 rounded ${
+                      isGeneratingSummary 
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                  >
+                    {isGeneratingSummary ? 'AI 생성 중...' : 'AI 자동생성'}
+                  </button>
+                  <button
+                    onClick={handleEditSummary}
+                    className="text-sm font-medium px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    {dailySummary ? '수정' : '직접작성'}
+                  </button>
+                </div>
               )}
             </div>
             
@@ -1045,6 +1085,47 @@ export default function ReportList() {
                 ) : (
                   '삭제'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 성공/실패 메시지 모달 */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0">
+                {modalMessage.includes('성공') ? (
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-gray-900">
+                  {modalMessage.includes('성공') ? '성공' : '알림'}
+                </h3>
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-500">
+                {modalMessage}
+              </p>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              >
+                확인
               </button>
             </div>
           </div>

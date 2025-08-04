@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Login from "@/components/Login";
 
 export default function ClientLayout({
@@ -46,8 +47,19 @@ export default function ClientLayout({
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600">
-              GPT코리아 일일업무 보고 시스템
+            <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+              <div className="flex items-center justify-center h-8">
+                <Image 
+                  src="/gptlogo.svg" 
+                  alt="GPT코리아 로고" 
+                  width={67} 
+                  height={34}
+                  className="object-contain h-full w-auto"
+                />
+              </div>
+              <span className="text-xl font-bold text-gray-900 leading-none mt-1.5">
+                ㅣ 업무 보고 시스템
+              </span>
             </Link>
             <button
               onClick={handleLogout}
@@ -70,7 +82,7 @@ export default function ClientLayout({
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              보고서 목록
+              일일 업무 보고
             </Link>
             <Link
               href="/create"
