@@ -1,7 +1,7 @@
 # 일일 업무 보고 시스템 (Daily Report System)
 
 ## 프로젝트 개요
-Google Sheets를 데이터베이스로 활용하는 일일 업무 보고 관리 시스템입니다. Next.js 기반의 웹 애플리케이션으로 Vercel에 배포할 수 있도록 구성되어 있습니다.
+Google Sheets를 데이터베이스로 활용하는 종합 업무 관리 시스템입니다. Next.js 기반의 웹 애플리케이션으로 Vercel에 배포할 수 있도록 구성되어 있습니다.
 
 ## 기술 스택
 - **Frontend**: Next.js 14 (App Router), React 18, TypeScript
@@ -12,14 +12,17 @@ Google Sheets를 데이터베이스로 활용하는 일일 업무 보고 관리 
 
 ## 주요 기능
 1. **일일 업무 보고서 작성**: 사원들이 매일 업무 내용을 기록
-2. **보고서 목록 조회**: 날짜별, 사원별 필터링 및 상세 보기
-3. **통계 대시보드**: 월별/주별 달성률 및 부서별 성과 분석
-4. **팀장 평가 시스템**: 우수/보통/미흡 평가 기능
+2. **보고서 목록 조회**: 날짜별, 부서별, 사원별 필터링 및 상세 보기
+3. **프로젝트 관리**: 프로젝트 등록, 수정, 삭제 및 진행률 관리
+4. **개인 업무 리포트**: 개인별 업무 성과 분석 및 리포트 생성
+5. **AI 자동 요약**: OpenAI API를 활용한 일일보고서 자동 요약 생성
+6. **PDF 내보내기**: 보고서를 PDF 형태로 내보내기 기능
+7. **페이지네이션**: 대용량 데이터 효율적 표시
 
 ## 시스템 구조
 
 ### Google Sheets 구조
-시스템은 3개의 시트로 구성됩니다:
+시스템은 6개의 시트로 구성됩니다:
 
 1. **일일업무관리** (메인 데이터)
    - 열 구조: 날짜, 사원명, 업무개요, 진행목표, 달성율(%), 팀장평가, 비고
@@ -33,25 +36,55 @@ Google Sheets를 데이터베이스로 활용하는 일일 업무 보고 관리 
    - 열 구조: 월별평균달성률, 주별평균달성률, 부서별통계
    - 범위: A2:C (헤더 제외)
 
+4. **일일보고요약**
+   - 열 구조: 날짜, 요약내용
+   - 범위: A2:B (헤더 제외)
+
+5. **프로젝트관리**
+   - 열 구조: 프로젝트명, 부서, 담당자, 목표종료일, 수정종료일, 상태, 진행률(%), 주요이슈, 세부진행상황
+   - 범위: A2:I (헤더 제외)
+
+6. **개인보고서**
+   - 열 구조: 사원명, 기간, 총보고서수, 평균달성률, 주요성과, 개선사항
+   - 범위: A2:F (헤더 제외)
+
 ### 프로젝트 구조
 ```
 daily-report-system/
 ├── src/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── reports/route.ts      # 보고서 API
-│   │   │   ├── employees/route.ts    # 사원 API
-│   │   │   └── stats/route.ts        # 통계 API
+│   │   │   ├── reports/route.ts           # 일일 보고서 API
+│   │   │   ├── employees/
+│   │   │   │   ├── route.ts              # 사원 목록 API
+│   │   │   │   └── [department]/route.ts  # 부서별 사원 API
+│   │   │   ├── departments/route.ts       # 부서 목록 API
+│   │   │   ├── projects/route.ts          # 프로젝트 관리 API
+│   │   │   ├── stats/route.ts             # 통계 API
+│   │   │   ├── summary/
+│   │   │   │   ├── route.ts              # 일일 요약 API
+│   │   │   │   └── generate/route.ts      # AI 요약 생성 API
+│   │   │   └── personal-summary/
+│   │   │       └── generate/route.ts      # 개인 리포트 생성 API
+│   │   ├── create/page.tsx            # 보고서 작성 페이지
+│   │   ├── reports/page.tsx           # 보고서 목록 페이지
+│   │   ├── projects/page.tsx          # 프로젝트 관리 페이지  
+│   │   ├── personal/page.tsx          # 개인 리포트 페이지
 │   │   ├── layout.tsx
-│   │   └── page.tsx                  # 메인 페이지
+│   │   └── page.tsx                   # 메인 페이지
 │   ├── components/
-│   │   ├── DailyReportForm.tsx       # 보고서 작성 폼
-│   │   ├── ReportList.tsx           # 보고서 목록
-│   │   └── StatsDashboard.tsx       # 통계 대시보드
+│   │   ├── ClientLayout.tsx           # 클라이언트 레이아웃
+│   │   ├── Login.tsx                  # 로그인 컴포넌트
+│   │   ├── DailyReportForm.tsx        # 보고서 작성 폼
+│   │   ├── ReportList.tsx            # 보고서 목록
+│   │   ├── ProjectList.tsx           # 프로젝트 목록
+│   │   └── PersonalReportList.tsx    # 개인 리포트 목록
 │   └── lib/
-│       └── google-sheets.ts         # Google Sheets 서비스
-├── .env.local.example               # 환경변수 예시
-├── vercel.json                      # Vercel 배포 설정
+│       └── google-sheets.ts          # Google Sheets 서비스
+├── .env.local.example                # 환경변수 예시
+├── vercel.json                       # Vercel 배포 설정
+├── CLAUDE.md                         # 개발 문서
+├── README.md                         # 프로젝트 설명서
 └── package.json
 ```
 
@@ -95,10 +128,13 @@ npm run type-check
 
 ### 2. Google Sheets 준비
 1. 새 스프레드시트 생성
-2. 다음 3개 시트 생성:
+2. 다음 6개 시트 생성:
    - **일일업무관리**: 헤더 행에 "날짜, 사원명, 업무개요, 진행목표, 달성율(%), 팀장평가, 비고"
    - **사원마스터**: 헤더 행에 "사원코드, 사원명, 직책, 부서"
    - **통계대시보드**: 헤더 행에 "월별평균달성률, 주별평균달성률, 부서별통계"
+   - **일일보고요약**: 헤더 행에 "날짜, 요약내용"
+   - **프로젝트관리**: 헤더 행에 "프로젝트명, 부서, 담당자, 목표종료일, 수정종료일, 상태, 진행률(%), 주요이슈, 세부진행상황"
+   - **개인보고서**: 헤더 행에 "사원명, 기간, 총보고서수, 평균달성률, 주요성과, 개선사항"
 3. 서비스 계정 이메일에 시트 편집 권한 부여
 
 ## Vercel 배포
@@ -129,9 +165,28 @@ Vercel 대시보드에서 다음 환경 변수들을 설정:
 - `GET`: 모든 보고서 조회
 - `POST`: 새 보고서 등록
 - `PUT`: 기존 보고서 수정
+- `DELETE`: 보고서 삭제
 
 ### Employees API (`/api/employees`)
 - `GET`: 사원 목록 조회
+- `/api/employees/[department]`: 부서별 사원 조회
+
+### Departments API (`/api/departments`)
+- `GET`: 부서 목록 조회
+
+### Projects API (`/api/projects`)
+- `GET`: 프로젝트 목록 조회
+- `POST`: 새 프로젝트 등록
+- `PUT`: 프로젝트 수정
+- `DELETE`: 프로젝트 삭제
+
+### Summary API (`/api/summary`)
+- `GET`: 일일 요약 조회
+- `POST`: 일일 요약 저장/수정
+- `/api/summary/generate`: AI 자동 요약 생성
+
+### Personal Summary API (`/api/personal-summary`)
+- `/api/personal-summary/generate`: 개인 리포트 생성
 
 ### Stats API (`/api/stats`)
 - `GET`: 통계 데이터 조회
@@ -161,6 +216,30 @@ interface Employee {
 }
 ```
 
+### Project
+```typescript
+interface Project {
+  id: string;
+  projectName: string;
+  department: string;
+  manager: string;
+  targetEndDate: string;
+  revisedEndDate: string;
+  status: string; // '진행중' | '완료' | '대기' | '보류' | '취소'
+  progressRate: number;
+  mainIssues: string;
+  detailedProgress: string;
+}
+```
+
+### DailySummary
+```typescript
+interface DailySummary {
+  date: string;
+  summary: string;
+}
+```
+
 ### StatsDashboard
 ```typescript
 interface StatsDashboard {
@@ -172,23 +251,37 @@ interface StatsDashboard {
 
 ## 주요 특징
 
-### 1. 실시간 동기화
+### 1. 종합 업무 관리
+- 일일 업무 보고서 작성 및 관리
+- 프로젝트 진행 상황 추적
+- 개인별 성과 분석 리포트
+
+### 2. AI 기반 자동화
+- OpenAI API를 활용한 일일보고서 자동 요약
+- 개인 성과 리포트 자동 생성
+- 업무 패턴 분석 및 제안
+
+### 3. 실시간 동기화
 - Google Sheets API를 통한 실시간 데이터 동기화
 - 여러 사용자가 동시에 접근 가능
+- 데이터 일관성 보장
 
-### 2. 반응형 디자인
+### 4. 반응형 디자인
 - 모바일 및 데스크톱 환경 모두 지원
 - Tailwind CSS를 활용한 현대적 UI
+- 직관적인 사용자 인터페이스
 
-### 3. 데이터 검증
+### 5. 고급 기능
+- 페이지네이션으로 대용량 데이터 효율적 처리
+- 다양한 필터링 및 검색 옵션
+- PDF 내보내기 기능
+- 로딩 상태 표시 및 중복 작업 방지
+
+### 6. 데이터 검증 및 보안
 - 클라이언트 및 서버 측 데이터 검증
 - 달성률 범위 제한 (0-100%)
 - 필수 필드 검증
-
-### 4. 사용자 경험
-- 직관적인 탭 기반 네비게이션
-- 필터링 및 검색 기능
-- 상세보기 모달
+- 안전한 데이터 처리
 
 ## 개발 지침
 
@@ -226,22 +319,56 @@ interface StatsDashboard {
 - 시트 이름 및 범위 검증
 - 네트워크 연결 상태 확인
 
+## 새로운 기능 및 개선사항
+
+### 최근 업데이트 (v2.0)
+1. **프로젝트 관리 시스템**
+   - 프로젝트 등록, 수정, 삭제 기능
+   - 진행률 추적 및 상태 관리 (진행중, 완료, 대기, 보류, 취소)
+   - 페이지네이션 지원 (20/50/100개 단위)
+   - 로딩 상태 표시 및 중복 작업 방지
+
+2. **AI 자동 요약 시스템**
+   - OpenAI API 연동으로 일일보고서 자동 요약
+   - 개인별 성과 리포트 자동 생성
+   - 맞춤형 분석 및 개선 제안
+
+3. **향상된 사용자 경험**
+   - 부서별 사원 자동 정렬 (사원코드 기준)
+   - 달성률 입력 필드 개선 (0 삭제 문제 해결)
+   - PDF 내보내기 기능 강화
+   - 반응형 페이지네이션 UI
+
+4. **데이터 무결성 강화**
+   - 프로젝트 삭제 로직 수정
+   - 상태 관리 최적화
+   - 에러 처리 개선
+
 ## 확장 가능성
 
 ### 1. 추가 기능
-- 이메일 알림 시스템
-- 파일 첨부 기능
-- 고급 통계 분석
+- 실시간 알림 시스템
+- 파일 첨부 및 문서 관리
+- 고급 차트 및 대시보드
+- 모바일 앱 개발
 
 ### 2. 보안 강화
-- 사용자 인증 시스템
-- 권한 기반 접근 제어
-- 데이터 암호화
+- OAuth 2.0 인증 시스템
+- 역할 기반 접근 제어 (RBAC)
+- 데이터 암호화 및 백업
+- 감사 로그 시스템
 
 ### 3. 성능 개선
-- 캐싱 시스템
-- 페이지네이션
-- 실시간 업데이트
+- Redis 캐싱 시스템
+- 무한 스크롤 구현
+- 실시간 WebSocket 연결
+- CDN 및 이미지 최적화
+
+### 4. 통합 기능
+- Slack/Teams 연동
+- 이메일 자동 발송
+- 캘린더 통합
+- 다국어 지원
 
 ## 라이센스
 이 프로젝트는 MIT 라이센스를 따릅니다.

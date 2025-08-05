@@ -1,82 +1,210 @@
 # 일일 업무 보고 시스템 (Daily Report System)
 
-Google Sheets를 데이터베이스로 활용하는 일일 업무 보고 관리 시스템입니다.
+![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)
+![React](https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-teal?style=for-the-badge&logo=tailwindcss)
 
-## 주요 기능
+## 📋 프로젝트 소개
 
-- 📝 **일일 업무 보고서 작성**: 사원들의 매일 업무 내용 기록
-- 📊 **보고서 목록 조회**: 날짜별, 사원별 필터링 및 상세 보기
-- 📈 **통계 대시보드**: 월별/주별 달성률 및 부서별 성과 분석
-- ⭐ **팀장 평가 시스템**: 우수/보통/미흡 평가 기능
+Google Sheets를 데이터베이스로 활용하는 **종합 업무 관리 시스템**입니다. 일일 업무 보고서 작성부터 프로젝트 관리, AI 기반 성과 분석까지 원스톱으로 제공하는 웹 애플리케이션입니다.
 
-## 기술 스택
+## ✨ 주요 기능
 
-- **Frontend**: Next.js 14, React 18, TypeScript
+### 📊 일일 업무 보고
+- **보고서 작성**: 직관적인 폼으로 간편한 일일 업무 작성
+- **실시간 조회**: 날짜별, 부서별, 사원별 다양한 필터링
+- **AI 자동 요약**: OpenAI API를 활용한 일일보고서 자동 요약 생성
+- **PDF 내보내기**: 보고서를 PDF 형태로 내보내기
+
+### 🚀 프로젝트 관리
+- **프로젝트 추적**: 프로젝트 등록, 수정, 삭제 및 진행률 관리
+- **상태 관리**: 진행중, 완료, 대기, 보류, 취소 상태별 분류
+- **페이지네이션**: 20/50/100개 단위로 효율적인 데이터 표시
+- **실시간 업데이트**: 로딩 상태 표시 및 중복 작업 방지
+
+### 📈 개인 리포트
+- **성과 분석**: 개인별 업무 성과 및 달성률 분석
+- **AI 리포트**: 자동화된 개인 성과 리포트 생성
+- **개선 제안**: 데이터 기반 업무 개선 방향 제시
+
+### 🎨 사용자 경험
+- **반응형 디자인**: 모바일과 데스크톱 모두 지원
+- **직관적 UI**: Tailwind CSS 기반 모던한 인터페이스
+- **스마트 정렬**: 부서별, 사원코드별 자동 정렬 기능
+
+## 🛠 기술 스택
+
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript
 - **Styling**: Tailwind CSS
 - **Database**: Google Sheets API
+- **AI Integration**: OpenAI API
 - **Deployment**: Vercel
 
-## 빠른 시작
+## 🚀 빠른 시작
 
 ### 1. 프로젝트 설치
+
 ```bash
+git clone <repository-url>
+cd daily-report-system
 npm install
 ```
 
 ### 2. 환경 변수 설정
-`.env.local.example`을 참조하여 `.env.local` 파일을 생성하고 Google Sheets API 정보를 설정합니다.
 
-### 3. 개발 서버 실행
+`.env.local` 파일을 생성하고 다음 변수들을 설정하세요:
+
+```env
+# Google Sheets 설정
+GOOGLE_SHEETS_ID=your_google_sheets_id
+GOOGLE_SERVICE_ACCOUNT_PROJECT_ID=your_project_id
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID=your_private_key_id
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour_private_key\n-----END PRIVATE KEY-----"
+GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL=your_service_account@your_project.iam.gserviceaccoun t.com
+GOOGLE_SERVICE_ACCOUNT_CLIENT_ID=your_client_id
+
+# OpenAI API (선택사항 - AI 기능 사용시)
+OPENAI_API_KEY=your_openai_api_key
+```
+
+### 3. Google Sheets 설정
+
+다음 6개 시트가 포함된 Google 스프레드시트를 생성하세요:
+
+1. **일일업무관리**: `날짜, 사원명, 업무개요, 진행목표, 달성율(%), 팀장평가, 비고`
+2. **사원마스터**: `사원코드, 사원명, 직책, 부서`
+3. **통계대시보드**: `월별평균달성률, 주별평균달성률, 부서별통계`
+4. **일일보고요약**: `날짜, 요약내용`
+5. **프로젝트관리**: `프로젝트명, 부서, 담당자, 목표종료일, 수정종료일, 상태, 진행률(%), 주요이슈, 세부진행상황`
+6. **개인보고서**: `사원명, 기간, 총보고서수, 평균달성률, 주요성과, 개선사항`
+
+### 4. 로컬 실행
+
 ```bash
 npm run dev
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000)을 열어 확인합니다.
+브라우저에서 `http://localhost:3000`으로 접속하세요.
 
-### 4. 빌드 및 배포
+### 5. 빌드 및 배포
+
 ```bash
 npm run build
 npm run start
 ```
 
-## Google Sheets 설정
+## 📱 페이지 구성
 
-1. Google Cloud Console에서 프로젝트 생성
-2. Google Sheets API 활성화
-3. 서비스 계정 생성 및 키 다운로드
-4. 다음 3개 시트가 있는 스프레드시트 생성:
-   - **일일업무관리**: 메인 데이터
-   - **사원마스터**: 사원 정보
-   - **통계대시보드**: 통계 데이터
+- **메인 페이지** (`/`): 대시보드 및 전체 개요
+- **보고서 작성** (`/create`): 일일 업무 보고서 작성
+- **보고서 목록** (`/reports`): 보고서 조회 및 관리
+- **프로젝트 관리** (`/projects`): 프로젝트 추적 및 관리
+- **개인 리포트** (`/personal`): 개인 성과 분석
 
-자세한 설정 방법은 [CLAUDE.md](./CLAUDE.md)를 참조하세요.
-
-## Vercel 배포
-
-1. Vercel 프로젝트 연결
-2. 환경 변수 설정
-3. 배포 확인
+## 🔧 개발 명령어
 
 ```bash
-vercel --prod
+# 개발 서버 실행
+npm run dev
+
+# 프로덕션 빌드
+npm run build
+
+# 타입 체크
+npm run type-check
+
+# 린트 실행
+npm run lint
 ```
 
-## 프로젝트 구조
+## 📊 데이터 구조
 
+### DailyReport
+```typescript
+interface DailyReport {
+  date: string;
+  employeeName: string;
+  department: string;
+  workOverview: string;
+  progressGoal: string;
+  achievementRate: number;
+  managerEvaluation: string;
+  remarks: string;
+}
 ```
-src/
-├── app/
-│   ├── api/          # API 라우트
-│   └── page.tsx      # 메인 페이지
-├── components/       # React 컴포넌트
-└── lib/             # 유틸리티 함수
+
+### Project
+```typescript
+interface Project {
+  id: string;
+  projectName: string;
+  department: string;
+  manager: string;
+  targetEndDate: string;
+  revisedEndDate: string;
+  status: '진행중' | '완료' | '대기' | '보류' | '취소';
+  progressRate: number;
+  mainIssues: string;
+  detailedProgress: string;
+}
 ```
 
-## 문서
+## 🎯 주요 특징
 
-- [CLAUDE.md](./CLAUDE.md) - 상세한 프로젝트 문서
-- [환경 변수 설정](./.env.local.example) - 환경 변수 예시
+### 🤖 AI 기반 자동화
+- OpenAI API를 활용한 일일보고서 자동 요약
+- 개인 성과 리포트 자동 생성
+- 업무 패턴 분석 및 개선 제안
 
-## 라이센스
+### ⚡ 성능 최적화
+- 페이지네이션으로 대용량 데이터 효율적 처리
+- 로딩 상태 표시 및 중복 작업 방지
+- 반응형 디자인으로 모든 디바이스 지원
 
-MIT License
+### 🔒 데이터 무결성
+- 클라이언트 및 서버 측 데이터 검증
+- Google Sheets API를 통한 실시간 동기화
+- 안전한 데이터 처리 및 에러 핸들링
+
+## 🔄 최근 업데이트 (v2.0)
+
+### 새로운 기능
+- ✅ 프로젝트 관리 시스템 추가
+- ✅ AI 자동 요약 기능 구현
+- ✅ 페이지네이션 지원
+- ✅ 향상된 사용자 인터페이스
+- ✅ 프로젝트 상태 관리 (5단계)
+- ✅ 개인 리포트 자동 생성
+
+### 개선사항
+- 🔧 부서별 사원 자동 정렬 (사원코드 기준)
+- 🔧 달성률 입력 필드 개선
+- 🔧 PDF 내보내기 기능 강화
+- 🔧 프로젝트 삭제 로직 수정
+- 🔧 로딩 상태 표시 및 중복 방지
+
+## 🤝 기여하기
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 라이센스
+
+이 프로젝트는 MIT 라이센스를 따릅니다. 자세한 내용은 `LICENSE` 파일을 참고하세요.
+
+## 🆘 지원 및 문의
+
+- 📧 이메일: [support@company.com](mailto:support@company.com)
+- 📖 문서: [개발 문서 (CLAUDE.md)](./CLAUDE.md)
+- 🐛 버그 리포트: GitHub Issues
+
+---
+
+<div align="center">
+  <p>Made with ❤️ for better workplace productivity</p>
+  <p>© 2024 Daily Report System. All rights reserved.</p>
+</div>

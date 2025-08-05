@@ -122,6 +122,15 @@ class GoogleSheetsService {
 
   async addDailyReport(report: DailyReport): Promise<boolean> {
     try {
+      // First, get the current data to find the next empty row
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: '일일업무관리!A:A',
+      });
+      
+      const currentRows = response.data.values || [];
+      const nextRow = currentRows.length + 1; // +1 for header row
+      
       const values = [
         [
           report.date,
@@ -134,9 +143,10 @@ class GoogleSheetsService {
         ],
       ];
 
-      await this.sheets.spreadsheets.values.append({
+      // Use update instead of append to ensure data goes to the correct columns
+      await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: '일일업무관리!A:G',
+        range: `일일업무관리!A${nextRow + 1}:G${nextRow + 1}`,
         valueInputOption: 'RAW',
         resource: { values },
       });
@@ -260,6 +270,15 @@ class GoogleSheetsService {
 
   async addDailyReports(reports: DailyReport[]): Promise<boolean> {
     try {
+      // First, get the current data to find the next empty row
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: '일일업무관리!A:A',
+      });
+      
+      const currentRows = response.data.values || [];
+      const startRow = currentRows.length + 2; // +1 for header, +1 for next row
+      
       const values = reports.map(report => [
         report.date,
         report.employeeName,
@@ -270,9 +289,10 @@ class GoogleSheetsService {
         report.remarks,
       ]);
 
-      await this.sheets.spreadsheets.values.append({
+      // Use update instead of append to ensure data goes to the correct columns
+      await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: '일일업무관리!A:G',
+        range: `일일업무관리!A${startRow}:G${startRow + values.length - 1}`,
         valueInputOption: 'RAW',
         resource: { values },
       });
