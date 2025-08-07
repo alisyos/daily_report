@@ -97,11 +97,11 @@ export async function POST(request: NextRequest) {
         employeeName: name,
         department: stats.department,
         reportCount: stats.count,
-        averageAchievement: Math.round(stats.totalAchievement / stats.count)
+        averageAchievement: Math.round(stats.totalAchievement / stats.count),
+        reports: stats.reports
       })),
-      recentReports: filteredReports
+      allReports: filteredReports
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 10)
     };
 
     const summary = generateSummaryText(analysisData);
@@ -117,71 +117,159 @@ export async function POST(request: NextRequest) {
 }
 
 function generateSummaryText(data: any): string {
-  const { filterInfo, overallStats, departmentStats, employeeStats } = data;
+  const { filterInfo, overallStats, employeeStats, allReports } = data;
   
-  let summary = `# 개인 업무 보고 요약\n\n`;
+  // 업무를 프로젝트/주제별로 그룹화
+  const projectGroups: { [key: string]: any } = {};
   
-  summary += `## 📊 필터 조건 및 기본 정보\n`;
-  summary += `- 조회 기간: ${filterInfo.period}\n`;
-  summary += `- 대상 부서: ${filterInfo.department}\n`;
-  summary += `- 대상 사원: ${filterInfo.employee}\n`;
-  summary += `- 총 보고서 수: ${overallStats.totalReports}건\n`;
-  summary += `- 전체 평균 달성률: ${overallStats.averageAchievement}%\n\n`;
-
-  if (departmentStats.length > 1) {
-    summary += `## 🏢 부서별 현황\n`;
-    departmentStats
-      .sort((a: any, b: any) => b.averageAchievement - a.averageAchievement)
-      .forEach((dept: any) => {
-        summary += `- **${dept.department}**: ${dept.reportCount}건 (${dept.employeeCount}명), 평균 달성률 ${dept.averageAchievement}%\n`;
-      });
-    summary += `\n`;
-  }
-
-  if (employeeStats.length > 1) {
-    summary += `## 👥 개인별 현황\n`;
-    const topPerformers = employeeStats
-      .sort((a: any, b: any) => b.averageAchievement - a.averageAchievement)
-      .slice(0, 5);
+  allReports.forEach((report: any) => {
+    // 업무 개요에서 프로젝트명/주제 추출 (첫 단어나 구문)
+    const projectKey = report.workOverview.split(/[-,]/)[0].trim();
     
-    topPerformers.forEach((emp: any, index: number) => {
-      const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '⭐';
-      summary += `${medal} **${emp.employeeName}** (${emp.department}): ${emp.reportCount}건, 평균 달성률 ${emp.averageAchievement}%\n`;
+    if (!projectGroups[projectKey]) {
+      projectGroups[projectKey] = {
+        projectName: projectKey,
+        tasks: [],
+        employees: new Set(),
+        dates: new Set(),
+        totalAchievement: 0,
+        count: 0,
+        details: {}
+      };
+    }
+    
+    projectGroups[projectKey].tasks.push({
+      date: report.date,
+      employee: report.employeeName,
+      work: report.workOverview,
+      goal: report.progressGoal,
+      achievement: report.achievementRate,
+      remarks: report.remarks
+    });
+    projectGroups[projectKey].employees.add(report.employeeName);
+    projectGroups[projectKey].dates.add(report.date);
+    projectGroups[projectKey].totalAchievement += report.achievementRate;
+    projectGroups[projectKey].count++;
+    
+    // 세부 작업별 그룹화
+    const detailKey = `${report.workOverview}|||${report.progressGoal}`;
+    if (!projectGroups[projectKey].details[detailKey]) {
+      projectGroups[projectKey].details[detailKey] = {
+        work: report.workOverview,
+        goal: report.progressGoal,
+        dates: [],
+        employees: new Set(),
+        achievements: []
+      };
+    }
+    projectGroups[projectKey].details[detailKey].dates.push(report.date);
+    projectGroups[projectKey].details[detailKey].employees.add(report.employeeName);
+    projectGroups[projectKey].details[detailKey].achievements.push(report.achievementRate);
+  });
+  
+  // 프로젝트 정렬 (작업 수 기준)
+  const sortedProjects = Object.values(projectGroups)
+    .sort((a: any, b: any) => b.count - a.count);
+  
+  let summary = `# 업무 보고 요약\n\n`;
+  summary += `📅 기간: ${filterInfo.period}\n`;
+  summary += `👥 대상: ${filterInfo.department === '전체 부서' ? '전체' : filterInfo.department} ${filterInfo.employee === '전체 사원' ? '' : `- ${filterInfo.employee}`}\n`;
+  summary += `📊 전체 달성률: ${overallStats.averageAchievement}%\n\n`;
+  summary += `---\n\n`;
+  
+  // 주요 프로젝트/업무별 요약
+  let projectNum = 1;
+  sortedProjects.forEach((project: any) => {
+    const avgAchievement = Math.round(project.totalAchievement / project.count);
+    const dateRange = Array.from(project.dates).sort();
+    const startDate = dateRange[0];
+    const endDate = dateRange[dateRange.length - 1];
+    
+    summary += `## ✅ ${projectNum}. ${project.projectName}\n\n`;
+    
+    summary += `### 주요 작업 내용\n`;
+    
+    // 세부 작업들 정리
+    Object.values(project.details)
+      .sort((a: any, b: any) => b.dates.length - a.dates.length)
+      .forEach((detail: any) => {
+        const avgDetailAchievement = Math.round(
+          detail.achievements.reduce((sum: number, rate: number) => sum + rate, 0) / detail.achievements.length
+        );
+        
+        summary += `**${detail.work}**\n`;
+        summary += `- ${detail.goal}\n`;
+        if (detail.employees.size > 1) {
+          summary += `- 담당: ${Array.from(detail.employees).join(', ')}\n`;
+        }
+        if (detail.dates.length > 1) {
+          summary += `- 수행: ${detail.dates.length}회 (${detail.dates[0]} ~ ${detail.dates[detail.dates.length - 1]})\n`;
+        }
+        summary += `- 달성률: ${avgDetailAchievement}%\n\n`;
+      });
+    
+    summary += `### 결과 및 성과\n`;
+    summary += `- 작업 기간: ${startDate === endDate ? startDate : `${startDate} ~ ${endDate}`}\n`;
+    summary += `- 참여 인원: ${Array.from(project.employees).join(', ')} (${project.employees.size}명)\n`;
+    summary += `- 평균 달성률: ${avgAchievement}%\n`;
+    summary += `- 총 작업 수: ${project.count}건\n\n`;
+    
+    projectNum++;
+  });
+  
+  // 인원별 기여도 요약
+  summary += `## 📌 인원별 업무 요약\n\n`;
+  
+  employeeStats
+    .sort((a: any, b: any) => b.averageAchievement - a.averageAchievement)
+    .forEach((emp: any) => {
+      const empProjects = new Set<string>();
+      emp.reports.forEach((report: any) => {
+        const projectKey = report.workOverview.split(/[-,]/)[0].trim();
+        empProjects.add(projectKey);
+      });
+      
+      summary += `### ${emp.employeeName} (${emp.department})\n`;
+      summary += `- 총 보고서: ${emp.reportCount}건\n`;
+      summary += `- 평균 달성률: ${emp.averageAchievement}%\n`;
+      summary += `- 주요 참여 프로젝트: ${Array.from(empProjects).slice(0, 3).join(', ')}${empProjects.size > 3 ? ` 외 ${empProjects.size - 3}개` : ''}\n\n`;
+    });
+  
+  // 종합 정리 테이블
+  summary += `## 📊 종합 정리\n\n`;
+  summary += `| 구분 | 주요 업무 | 달성률 | 상태 |\n`;
+  summary += `|------|-----------|--------|------|\n`;
+  
+  sortedProjects.slice(0, 5).forEach((project: any) => {
+    const avgAchievement = Math.round(project.totalAchievement / project.count);
+    const status = avgAchievement >= 90 ? '✅ 완료' : 
+                   avgAchievement >= 70 ? '🔄 진행중' : 
+                   '⚠️ 지연';
+    summary += `| ${project.projectName} | ${project.count}개 작업 | ${avgAchievement}% | ${status} |\n`;
+  });
+  
+  summary += `\n`;
+  
+  // 특이사항 (연차, 미작성 등)
+  const annualLeaves = allReports.filter((r: any) => r.workOverview === '연차');
+  if (annualLeaves.length > 0) {
+    summary += `## 🗓️ 기타 사항\n`;
+    const leaveDates: { [key: string]: string[] } = {};
+    annualLeaves.forEach((leave: any) => {
+      if (!leaveDates[leave.employeeName]) {
+        leaveDates[leave.employeeName] = [];
+      }
+      leaveDates[leave.employeeName].push(leave.date);
+    });
+    
+    Object.entries(leaveDates).forEach(([name, dates]) => {
+      summary += `- ${name}: 연차 (${dates.join(', ')})\n`;
     });
     summary += `\n`;
   }
-
-  summary += `## 📈 성과 분석\n`;
-  const highPerformers = employeeStats.filter((emp: any) => emp.averageAchievement >= 90).length;
-  const mediumPerformers = employeeStats.filter((emp: any) => emp.averageAchievement >= 70 && emp.averageAchievement < 90).length;
-  const lowPerformers = employeeStats.filter((emp: any) => emp.averageAchievement < 70).length;
-
-  summary += `- 고성과자 (90% 이상): ${highPerformers}명\n`;
-  summary += `- 보통 성과자 (70-89%): ${mediumPerformers}명\n`;
-  summary += `- 개선 필요 (70% 미만): ${lowPerformers}명\n\n`;
-
-  if (overallStats.averageAchievement >= 85) {
-    summary += `## ✨ 종합 평가\n전체적으로 우수한 성과를 보이고 있습니다. 평균 달성률이 ${overallStats.averageAchievement}%로 목표 수준을 크게 상회하고 있습니다.\n\n`;
-  } else if (overallStats.averageAchievement >= 70) {
-    summary += `## 📊 종합 평가\n전체적으로 양호한 성과를 보이고 있습니다. 평균 달성률 ${overallStats.averageAchievement}%로 적정 수준을 유지하고 있으나, 추가적인 개선 여지가 있습니다.\n\n`;
-  } else {
-    summary += `## 🔄 종합 평가\n전체 평균 달성률이 ${overallStats.averageAchievement}%로 개선이 필요한 상황입니다. 성과 향상을 위한 구체적인 지원 방안 검토가 필요합니다.\n\n`;
-  }
-
-  summary += `## 📝 주요 업무 동향\n`;
-  const workTypes = data.recentReports.reduce((acc: any, report: any) => {
-    const workType = report.workOverview.split(' ')[0];
-    acc[workType] = (acc[workType] || 0) + 1;
-    return acc;
-  }, {});
-
-  const topWorkTypes = Object.entries(workTypes)
-    .sort(([,a], [,b]) => (b as number) - (a as number))
-    .slice(0, 5);
-
-  topWorkTypes.forEach(([type, count]) => {
-    summary += `- ${type}: ${count}건\n`;
-  });
-
+  
+  summary += `---\n\n`;
+  summary += `💡 필요하시면 위 내용을 주간보고, 월간보고 또는 회의자료용으로 재구성해드릴 수 있습니다.\n`;
+  
   return summary;
 }

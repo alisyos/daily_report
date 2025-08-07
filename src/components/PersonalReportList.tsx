@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import SummaryModalAI from './SummaryModalAI';
 
 interface DailyReport {
   date: string;
@@ -34,13 +35,25 @@ export default function PersonalReportList() {
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterEmployee, setFilterEmployee] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [filterSummary, setFilterSummary] = useState<string>('');
+  const [aiSummaryData, setAiSummaryData] = useState<any>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // 부서 필터가 변경될 때 사원 필터 유효성 검사
+  useEffect(() => {
+    if (filterEmployee && filterDepartment && employees.length > 0) {
+      const isValidEmployee = employees.some(emp => 
+        emp.employeeName === filterEmployee && emp.department === filterDepartment
+      );
+      if (!isValidEmployee) {
+        setFilterEmployee('');
+      }
+    }
+  }, [filterDepartment, employees, filterEmployee]);
 
 
   const fetchData = async () => {
@@ -80,7 +93,7 @@ export default function PersonalReportList() {
 
     setIsGeneratingSummary(true);
     try {
-      const response = await fetch('/api/personal-summary/generate', {
+      const response = await fetch('/api/personal-summary/generate-ai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +111,7 @@ export default function PersonalReportList() {
 
       if (response.ok) {
         const data = await response.json();
-        setFilterSummary(data.summary);
+        setAiSummaryData(data.summary);
         setShowSummaryModal(true);
       } else {
         const error = await response.json();
@@ -258,7 +271,11 @@ export default function PersonalReportList() {
             <select
               id="filterDepartment"
               value={filterDepartment}
-              onChange={(e) => setFilterDepartment(e.target.value)}
+              onChange={(e) => {
+                setFilterDepartment(e.target.value);
+                // 부서가 변경되면 사원명 필터 초기화
+                setFilterEmployee('');
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">모든 부서</option>
@@ -460,51 +477,12 @@ export default function PersonalReportList() {
       </div>
 
       {/* AI 요약 모달 */}
-      {showSummaryModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900">필터 조건 업무 보고 요약</h3>
-              <button
-                onClick={() => setShowSummaryModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="mb-4">
-              <div className="bg-blue-50 p-3 rounded-md mb-4">
-                <h4 className="text-sm font-semibold text-blue-900 mb-2">적용된 필터 조건</h4>
-                <div className="text-sm text-blue-800">
-                  <p>기간: {filterType === 'month' ? `${filterMonth} (월 단위)` : `${filterStartDate} ~ ${filterEndDate}`}</p>
-                  {filterDepartment && <p>부서: {filterDepartment}</p>}
-                  {filterEmployee && <p>사원명: {filterEmployee}</p>}
-                  <p>총 보고서 수: {filteredReports.length}건</p>
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-md">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">AI 생성 요약</h4>
-                <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {filterSummary}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowSummaryModal(false)}
-                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
-              >
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SummaryModalAI
+        show={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+        summaryData={aiSummaryData}
+        isLoading={isGeneratingSummary}
+      />
     </div>
   );
 }

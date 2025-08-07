@@ -78,7 +78,9 @@ daily-report-system/
 │   │   ├── DailyReportForm.tsx        # 보고서 작성 폼
 │   │   ├── ReportList.tsx            # 보고서 목록
 │   │   ├── ProjectList.tsx           # 프로젝트 목록
-│   │   └── PersonalReportList.tsx    # 개인 리포트 목록
+│   │   ├── PersonalReportList.tsx    # 개인 리포트 목록
+│   │   ├── SummaryModal.tsx          # 기본 요약 모달
+│   │   └── SummaryModalAI.tsx        # AI 구조화 요약 모달
 │   └── lib/
 │       └── google-sheets.ts          # Google Sheets 서비스
 ├── .env.local.example                # 환경변수 예시
@@ -186,7 +188,8 @@ Vercel 대시보드에서 다음 환경 변수들을 설정:
 - `/api/summary/generate`: AI 자동 요약 생성
 
 ### Personal Summary API (`/api/personal-summary`)
-- `/api/personal-summary/generate`: 개인 리포트 생성
+- `/api/personal-summary/generate`: 기본 개인 리포트 생성
+- `/api/personal-summary/generate-ai`: GPT-4.1 기반 구조화된 AI 요약 생성
 
 ### Stats API (`/api/stats`)
 - `GET`: 통계 데이터 조회
@@ -257,9 +260,11 @@ interface StatsDashboard {
 - 개인별 성과 분석 리포트
 
 ### 2. AI 기반 자동화
-- OpenAI API를 활용한 일일보고서 자동 요약
-- 개인 성과 리포트 자동 생성
-- 업무 패턴 분석 및 제안
+- GPT-4.1 모델을 활용한 고도화된 요약 생성
+- JSON 구조화 응답으로 체계적인 데이터 처리
+- 프로젝트/업무 단위 자동 분류 및 그룹화
+- 구조화된 UI로 시각적 요약 결과 제공
+- 개인별 성과 분석 및 맞춤형 제안
 
 ### 3. 실시간 동기화
 - Google Sheets API를 통한 실시간 데이터 동기화
@@ -321,14 +326,38 @@ interface StatsDashboard {
 
 ## 새로운 기능 및 개선사항
 
-### 최근 업데이트 (v2.0)
+### 최근 업데이트 (v3.0)
+1. **고도화된 AI 요약 시스템**
+   - GPT-4.1 모델 적용으로 성능 향상
+   - JSON 구조화 응답으로 체계적 데이터 처리
+   - 프로젝트/업무 단위 자동 그룹화 및 분류
+   - 구조화된 UI로 요약 결과 시각화
+
+2. **향상된 개인 업무 보고 페이지**
+   - 프로젝트별 카드 형태 요약 표시
+   - 인원별 성과 그리드 레이아웃
+   - 종합 정리 테이블과 상태별 색상 뱃지
+   - JSON 다운로드 기능
+
+3. **필터링 시스템 개선**
+   - 부서 변경 시 사원명 필터 자동 초기화
+   - 부서별 사원 목록 정확한 필터링
+   - useEffect를 활용한 실시간 유효성 검사
+
+4. **UI/UX 개선**
+   - 그라데이션 헤더와 모던한 모달 디자인  
+   - 태그 스타일 필터 정보 표시
+   - 반응형 레이아웃과 부드러운 애니메이션
+   - 로딩 상태와 에러 처리 강화
+
+### 이전 업데이트 (v2.0)
 1. **프로젝트 관리 시스템**
    - 프로젝트 등록, 수정, 삭제 기능
    - 진행률 추적 및 상태 관리 (진행중, 완료, 대기, 보류, 취소)
    - 페이지네이션 지원 (20/50/100개 단위)
    - 로딩 상태 표시 및 중복 작업 방지
 
-2. **AI 자동 요약 시스템**
+2. **기본 AI 자동 요약 시스템**
    - OpenAI API 연동으로 일일보고서 자동 요약
    - 개인별 성과 리포트 자동 생성
    - 맞춤형 분석 및 개선 제안
