@@ -160,21 +160,38 @@ export default function PersonalReportList() {
 
   const calculateMonthlyStats = (employeeReports: { [date: string]: DailyReport[] }) => {
     let totalAchievement = 0;
-    let workingDays = 0;
+    let totalReports = 0;
     let annualLeaveDays = 0;
+    const workingDates = new Set<string>();
+    const annualLeaveDates = new Set<string>();
 
-    Object.values(employeeReports).forEach(dailyReports => {
+    Object.entries(employeeReports).forEach(([date, dailyReports]) => {
+      let hasAnnualLeave = false;
+      let hasWorkingReport = false;
+      
       dailyReports.forEach(report => {
         if (report.workOverview === '연차') {
-          annualLeaveDays++;
+          hasAnnualLeave = true;
         } else if (report.workOverview !== '작성 안됨') {
-          workingDays++;
+          hasWorkingReport = true;
+          totalReports++;
           totalAchievement += report.achievementRate;
         }
       });
+      
+      // 연차가 있는 날은 연차 날짜로 카운트
+      if (hasAnnualLeave) {
+        annualLeaveDates.add(date);
+      } 
+      // 연차가 없고 업무 보고가 있는 날은 근무 날짜로 카운트
+      else if (hasWorkingReport) {
+        workingDates.add(date);
+      }
     });
 
-    const avgAchievement = workingDays > 0 ? Math.round(totalAchievement / workingDays) : 0;
+    const workingDays = workingDates.size;
+    annualLeaveDays = annualLeaveDates.size;
+    const avgAchievement = totalReports > 0 ? Math.round(totalAchievement / totalReports) : 0;
 
     return {
       totalDays: Object.keys(employeeReports).length,
