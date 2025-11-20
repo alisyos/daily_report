@@ -69,6 +69,17 @@ export interface PersonalReport {
   updatedAt?: string;
 }
 
+export interface Prompt {
+  id?: string;
+  promptKey: string;
+  promptName: string;
+  description?: string;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Database column name mapping (camelCase to snake_case)
 const toSnakeCase = (str: string): string => {
   return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
@@ -510,6 +521,93 @@ class SupabaseService {
       return true;
     } catch (error) {
       console.error('Error adding personal report:', error);
+      return false;
+    }
+  }
+
+  // Prompt Methods
+  async getPrompts(): Promise<Prompt[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('prompts')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      return convertKeysToCamelCase(data || []);
+    } catch (error) {
+      console.error('Error fetching prompts:', error);
+      return [];
+    }
+  }
+
+  async getPromptByKey(promptKey: string): Promise<Prompt | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('prompts')
+        .select('*')
+        .eq('prompt_key', promptKey)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return null; // Not found
+        throw error;
+      }
+
+      return convertKeysToCamelCase(data);
+    } catch (error) {
+      console.error('Error fetching prompt:', error);
+      return null;
+    }
+  }
+
+  async updatePrompt(id: string, prompt: Partial<Prompt>): Promise<boolean> {
+    try {
+      const dbPrompt = convertKeysToSnakeCase({
+        ...prompt,
+        updatedAt: new Date().toISOString()
+      });
+
+      const { error } = await this.supabase
+        .from('prompts')
+        .update(dbPrompt)
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating prompt:', error);
+      return false;
+    }
+  }
+
+  async addPrompt(prompt: Omit<Prompt, 'id'>): Promise<boolean> {
+    try {
+      const dbPrompt = convertKeysToSnakeCase(prompt);
+      const { error } = await this.supabase
+        .from('prompts')
+        .insert([dbPrompt]);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error adding prompt:', error);
+      return false;
+    }
+  }
+
+  async deleteEmployee(id: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('employees')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting employee:', error);
       return false;
     }
   }
