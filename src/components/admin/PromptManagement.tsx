@@ -114,7 +114,7 @@ export default function PromptManagement() {
               </div>
             </div>
 
-            {editingPrompt?.id === prompt.id ? (
+            {editingPrompt?.id === prompt.id && editingPrompt ? (
               <form onSubmit={handleSubmit} className="p-6">
                 <div className="space-y-4">
                   <div>
