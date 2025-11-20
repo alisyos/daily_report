@@ -10,7 +10,8 @@
       "Bash(npm run migrate:summaries:*)",
       "Bash(psql \"postgresql://postgres.rlqxxibfbnqkqmqhcwho:Qlalfqjsgh12!@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres\" -c \"SELECT COUNT(*) FROM daily_summaries;\")",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push)"
     ],
     "deny": [],
     "ask": []
