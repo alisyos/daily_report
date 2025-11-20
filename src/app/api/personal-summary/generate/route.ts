@@ -47,16 +47,17 @@ export async function POST(request: NextRequest) {
     };
 
     const departmentStats = filteredReports.reduce((acc, report) => {
-      if (!acc[report.department]) {
-        acc[report.department] = {
+      const department = report.department || '미분류';
+      if (!acc[department]) {
+        acc[department] = {
           count: 0,
           totalAchievement: 0,
           employees: new Set()
         };
       }
-      acc[report.department].count++;
-      acc[report.department].totalAchievement += report.achievementRate;
-      acc[report.department].employees.add(report.employeeName);
+      acc[department].count++;
+      acc[department].totalAchievement += report.achievementRate;
+      acc[department].employees.add(report.employeeName);
       return acc;
     }, {} as any);
 

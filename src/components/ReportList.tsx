@@ -177,10 +177,11 @@ export default function ReportList() {
 
   const completeReportList = getCompleteReportList();
   const groupedReports = completeReportList.reduce((acc, report) => {
-    if (!acc[report.department]) {
-      acc[report.department] = [];
+    const department = report.department || '미분류';
+    if (!acc[department]) {
+      acc[department] = [];
     }
-    acc[report.department].push(report);
+    acc[department].push(report);
     return acc;
   }, {} as { [key: string]: DailyReport[] });
 
@@ -350,10 +351,11 @@ export default function ReportList() {
 
       // 부서별 그룹화
       const groupedReports = completeReportList.reduce((acc: { [key: string]: DailyReport[] }, report: DailyReport) => {
-        if (!acc[report.department]) {
-          acc[report.department] = [];
+        const department = report.department || '미분류';
+        if (!acc[department]) {
+          acc[department] = [];
         }
-        acc[report.department].push(report);
+        acc[department].push(report);
         return acc;
       }, {} as { [key: string]: DailyReport[] });
 
