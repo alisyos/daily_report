@@ -32,7 +32,11 @@ export default function EmployeeManagement() {
       const response = await fetch('/api/admin/employees');
       if (response.ok) {
         const data = await response.json();
-        setEmployees(data);
+        // Sort by employee code
+        const sortedData = data.sort((a: Employee, b: Employee) =>
+          a.employeeCode.localeCompare(b.employeeCode)
+        );
+        setEmployees(sortedData);
       }
     } catch (error) {
       console.error('Error fetching employees:', error);
