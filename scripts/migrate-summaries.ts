@@ -9,7 +9,7 @@ import { resolve } from 'path';
 
 config({ path: resolve(__dirname, '../.env.local') });
 
-import GoogleSheetsService from '../src/lib/google-sheets';
+import GoogleSheetsService from './google-sheets';
 import SupabaseService from '../src/lib/supabase';
 
 async function migrateSummaries() {
