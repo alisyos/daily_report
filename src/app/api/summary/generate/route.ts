@@ -30,10 +30,11 @@ export async function POST(request: NextRequest) {
 
     // 부서별로 그룹화
     const groupedReports = dateReports.reduce((acc, report) => {
-      if (!acc[report.department]) {
-        acc[report.department] = [];
+      const department = report.department || '미분류';
+      if (!acc[department]) {
+        acc[department] = [];
       }
-      acc[report.department].push(report);
+      acc[department].push(report);
       return acc;
     }, {} as { [key: string]: typeof dateReports });
 
