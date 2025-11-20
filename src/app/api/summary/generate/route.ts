@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import GoogleSheetsService from '@/lib/google-sheets';
+import SupabaseService from '@/lib/supabase';
 import OpenAI from 'openai';
 
-const sheetsService = new GoogleSheetsService();
+const dbService = new SupabaseService();
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 해당 날짜의 모든 보고서 가져오기
-    const reports = await sheetsService.getDailyReports();
+    const reports = await dbService.getDailyReports();
     const dateReports = reports.filter(report => report.date === date);
 
     if (dateReports.length === 0) {
@@ -101,7 +101,7 @@ ${reportText}
     }
 
     // 생성된 요약 저장
-    const success = await sheetsService.addDailySummary({
+    const success = await dbService.addDailySummary({
       date,
       summary
     });

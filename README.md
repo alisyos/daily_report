@@ -7,7 +7,9 @@
 
 ## 📋 프로젝트 소개
 
-Google Sheets를 데이터베이스로 활용하는 **종합 업무 관리 시스템**입니다. 일일 업무 보고서 작성부터 프로젝트 관리, AI 기반 성과 분석까지 원스톱으로 제공하는 웹 애플리케이션입니다.
+Supabase PostgreSQL을 데이터베이스로 활용하는 **종합 업무 관리 시스템**입니다. 일일 업무 보고서 작성부터 프로젝트 관리, AI 기반 성과 분석까지 원스톱으로 제공하는 웹 애플리케이션입니다.
+
+> **📢 Important**: v4.0부터 Google Sheets에서 Supabase로 마이그레이션되었습니다. 기존 사용자는 [마이그레이션 가이드](./MIGRATION_GUIDE.md)를 참고하세요.
 
 ## ✨ 주요 기능
 
@@ -39,9 +41,10 @@ Google Sheets를 데이터베이스로 활용하는 **종합 업무 관리 시�
 
 - **Frontend**: Next.js 14 (App Router), React 18, TypeScript
 - **Styling**: Tailwind CSS
-- **Database**: Google Sheets API
+- **Database**: Supabase (PostgreSQL)
 - **AI Integration**: OpenAI GPT-4.1 API
 - **Deployment**: Vercel
+- **Legacy**: Google Sheets API (v3.0 이하)
 
 ## 🚀 빠른 시작
 
@@ -53,33 +56,27 @@ cd daily-report-system
 npm install
 ```
 
-### 2. 환경 변수 설정
+### 2. Supabase 프로젝트 설정
+
+1. [Supabase](https://supabase.com)에서 새 프로젝트 생성
+2. SQL Editor에서 `supabase/migrations/001_initial_schema.sql` 실행
+3. Settings > API에서 프로젝트 URL과 키 확인
+
+### 3. 환경 변수 설정
 
 `.env.local` 파일을 생성하고 다음 변수들을 설정하세요:
 
 ```env
-# Google Sheets 설정
-GOOGLE_SHEETS_ID=your_google_sheets_id
-GOOGLE_SERVICE_ACCOUNT_PROJECT_ID=your_project_id
-GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID=your_private_key_id
-GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour_private_key\n-----END PRIVATE KEY-----"
-GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL=your_service_account@your_project.iam.gserviceaccoun t.com
-GOOGLE_SERVICE_ACCOUNT_CLIENT_ID=your_client_id
+# Supabase 설정
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 
 # OpenAI API (필수 - AI 요약 기능용)
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-### 3. Google Sheets 설정
-
-다음 6개 시트가 포함된 Google 스프레드시트를 생성하세요:
-
-1. **일일업무관리**: `날짜, 사원명, 업무개요, 진행목표, 달성율(%), 팀장평가, 비고`
-2. **사원마스터**: `사원코드, 사원명, 직책, 부서`
-3. **통계대시보드**: `월별평균달성률, 주별평균달성률, 부서별통계`
-4. **일일보고요약**: `날짜, 요약내용`
-5. **프로젝트관리**: `프로젝트명, 부서, 담당자, 목표종료일, 수정종료일, 상태, 진행률(%), 주요이슈, 세부진행상황`
-6. **개인보고서**: `사원명, 기간, 총보고서수, 평균달성률, 주요성과, 개선사항`
+자세한 설정 방법은 [마이그레이션 가이드](./MIGRATION_GUIDE.md)를 참고하세요.
 
 ### 4. 로컬 실행
 
@@ -118,6 +115,9 @@ npm run type-check
 
 # 린트 실행
 npm run lint
+
+# 데이터 마이그레이션 (Google Sheets → Supabase)
+npm run migrate
 ```
 
 ## 📊 데이터 구조
@@ -167,30 +167,31 @@ interface Project {
 
 ### 🔒 데이터 무결성
 - 클라이언트 및 서버 측 데이터 검증
-- Google Sheets API를 통한 실시간 동기화
+- PostgreSQL 트랜잭션 기반 데이터 일관성
+- Row Level Security (RLS)를 통한 접근 제어
 - 안전한 데이터 처리 및 에러 핸들링
 
-## 🔄 최근 업데이트 (v3.0)
+## 🔄 최근 업데이트
 
-### 🆕 새로운 기능
+### 🚀 v4.0 (최신) - Supabase 마이그레이션
+- ✅ **데이터베이스 마이그레이션**: Google Sheets → Supabase PostgreSQL
+- ✅ **성능 향상**: 대용량 데이터 처리 속도 대폭 개선
+- ✅ **확장성**: 관계형 데이터베이스의 강력한 쿼리 기능
+- ✅ **실시간 동기화**: Supabase 실시간 기능 지원 준비
+- ✅ **Row Level Security**: 데이터 보안 강화
+- ✅ **자동 마이그레이션 스크립트**: 원클릭 데이터 이전
+- 📖 [마이그레이션 가이드](./MIGRATION_GUIDE.md) 참고
+
+### 📦 v3.0 - AI 고도화
 - ✅ **고도화된 AI 요약**: GPT-4.1 기반 구조화된 요약 생성
 - ✅ **JSON 응답 구조**: 체계적인 데이터 처리 및 분석
 - ✅ **프로젝트별 분류**: 업무를 자동으로 프로젝트 단위로 그룹화
 - ✅ **시각화된 UI**: 카드 형태와 테이블로 직관적 표시
-- ✅ **JSON 다운로드**: 구조화된 데이터 추출 기능
 
-### 🔧 개선사항
-- 🔧 **스마트 필터링**: 부서 변경 시 사원명 자동 초기화
-- 🔧 **실시간 유효성 검사**: useEffect 기반 필터 상태 관리
-- 🔧 **모던한 UI**: 그라데이션 헤더와 반응형 모달 디자인
-- 🔧 **상태별 뱃지**: 색상으로 구분되는 성과 및 프로젝트 상태
-- 🔧 **에러 처리**: 향상된 에러 핸들링과 폴백 시스템
-
-### 🗂️ 이전 버전 (v2.0)
+### 🗂️ v2.0 - 프로젝트 관리
 - ✅ 프로젝트 관리 시스템 추가
 - ✅ 기본 AI 자동 요약 기능
 - ✅ 페이지네이션 지원
-- ✅ 프로젝트 상태 관리 (5단계)
 
 ## 🤝 기여하기
 

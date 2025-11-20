@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import GoogleSheetsService from '@/lib/google-sheets';
+import SupabaseService from '@/lib/supabase';
 
-const sheetsService = new GoogleSheetsService();
+const dbService = new SupabaseService();
 
 export async function GET() {
   try {
-    const employees = await sheetsService.getEmployees();
+    const employees = await dbService.getEmployees();
     return NextResponse.json(employees);
   } catch (error) {
     console.error('Error fetching employees:', error);

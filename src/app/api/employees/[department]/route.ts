@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import GoogleSheetsService from '@/lib/google-sheets';
+import SupabaseService from '@/lib/supabase';
 
-const sheetsService = new GoogleSheetsService();
+const dbService = new SupabaseService();
 
 export async function GET(
   request: Request,
@@ -10,10 +10,10 @@ export async function GET(
   try {
     const { department } = await params;
     const decodedDepartment = decodeURIComponent(department);
-    const employees = await sheetsService.getEmployeesByDepartment(decodedDepartment);
+    const employees = await dbService.getEmployeesByDepartment(decodedDepartment);
     return NextResponse.json(employees);
   } catch (error) {
     console.error('Error fetching employees by department:', error);
     return NextResponse.json({ error: 'Failed to fetch employees' }, { status: 500 });
   }
-} 
+}

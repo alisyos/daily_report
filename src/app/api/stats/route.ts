@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import GoogleSheetsService from '@/lib/google-sheets';
+import SupabaseService from '@/lib/supabase';
 
-const sheetsService = new GoogleSheetsService();
+const dbService = new SupabaseService();
 
 export async function GET() {
   try {
-    const stats = await sheetsService.getStatsDashboard();
+    const stats = await dbService.getStatsDashboard();
     return NextResponse.json(stats);
   } catch (error) {
     console.error('Error fetching stats:', error);

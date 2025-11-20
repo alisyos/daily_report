@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import GoogleSheetsService from '@/lib/google-sheets';
+import SupabaseService from '@/lib/supabase';
 
-const sheetsService = new GoogleSheetsService();
+const dbService = new SupabaseService();
 
 export async function GET() {
   try {
-    const reports = await sheetsService.getDailyReports();
+    const reports = await dbService.getDailyReports();
     return NextResponse.json(reports);
   } catch (error) {
     console.error('Error fetching reports:', error);
@@ -57,12 +57,12 @@ export async function POST(request: NextRequest) {
       // 기존 데이터 수정: 특정 날짜와 직원들의 기존 데이터를 삭제하고 새로운 데이터 추가
       const date = reports[0].date;
       const employeeNames = reports.map((report: any) => report.employeeName);
-      success = await sheetsService.replaceReportsByDateAndEmployees(date, employeeNames, reports);
+      success = await dbService.replaceReportsByDateAndEmployees(date, employeeNames, reports);
     } else {
       // 새로운 데이터 추가: 기존 로직 사용
       success = reports.length > 1
-        ? await sheetsService.addDailyReports(reports)
-        : await sheetsService.addDailyReport(reports[0]);
+        ? await dbService.addDailyReports(reports)
+        : await dbService.addDailyReport(reports[0]);
     }
     
     if (success) {
@@ -82,14 +82,14 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { rowIndex, report } = await request.json();
-    
-    if (rowIndex === undefined || !report) {
-      return NextResponse.json({ error: 'Missing rowIndex or report data' }, { status: 400 });
+    const { id, report } = await request.json();
+
+    if (!id || !report) {
+      return NextResponse.json({ error: 'Missing id or report data' }, { status: 400 });
     }
-    
-    const success = await sheetsService.updateDailyReport(rowIndex, report);
-    
+
+    const success = await dbService.updateDailyReport(id, report);
+
     if (success) {
       return NextResponse.json({ message: 'Report updated successfully' });
     } else {
@@ -104,32 +104,32 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { date, employeeName, workOverview } = await request.json();
-    
+
     if (!date || !employeeName) {
       return NextResponse.json({ error: 'Missing required fields: date and employeeName' }, { status: 400 });
     }
-    
+
     // Get all reports to find the exact match
-    const allReports = await sheetsService.getDailyReports();
-    const reportToDelete = allReports.find((report: any) => 
-      report.date === date && 
-      report.employeeName === employeeName && 
+    const allReports = await dbService.getDailyReports();
+    const reportToDelete = allReports.find((report: any) =>
+      report.date === date &&
+      report.employeeName === employeeName &&
       report.workOverview === workOverview
     );
-    
+
     if (!reportToDelete) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
-    
+
     // Check if this employee has multiple reports on this date
-    const employeeReportsOnDate = allReports.filter((report: any) => 
+    const employeeReportsOnDate = allReports.filter((report: any) =>
       report.date === date && report.employeeName === employeeName
     );
-    
+
     if (employeeReportsOnDate.length === 1) {
       // If this is the only report for this employee on this date, delete it
-      const success = await sheetsService.deleteReportsByDateAndEmployees(date, [employeeName]);
-      
+      const success = await dbService.deleteReportsByDateAndEmployees(date, [employeeName]);
+
       if (success) {
         return NextResponse.json({ message: 'Report deleted successfully' });
       } else {
@@ -141,23 +141,23 @@ export async function DELETE(request: NextRequest) {
       const reportsToKeep = employeeReportsOnDate.filter((report: any) =>
         report.workOverview !== workOverview
       );
-      
+
       // First delete all reports for this employee on this date
-      const deleteSuccess = await sheetsService.deleteReportsByDateAndEmployees(date, [employeeName]);
-      
+      const deleteSuccess = await dbService.deleteReportsByDateAndEmployees(date, [employeeName]);
+
       if (!deleteSuccess) {
         return NextResponse.json({ error: 'Failed to delete reports' }, { status: 500 });
       }
-      
+
       // Then add back the reports we want to keep
       if (reportsToKeep.length > 0) {
-        const addSuccess = await sheetsService.addDailyReports(reportsToKeep);
-        
+        const addSuccess = await dbService.addDailyReports(reportsToKeep);
+
         if (!addSuccess) {
           return NextResponse.json({ error: 'Failed to restore remaining reports' }, { status: 500 });
         }
       }
-      
+
       return NextResponse.json({ message: 'Report deleted successfully' });
     }
   } catch (error) {

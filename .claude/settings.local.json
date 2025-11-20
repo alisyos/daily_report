@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(cat:*)",
+      "Bash(npm run migrate:*)",
+      "Bash(node -e:*)",
+      "Bash(tsx scripts/migrate-summaries.ts:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npm run migrate:summaries:*)",
+      "Bash(psql \"postgresql://postgres.rlqxxibfbnqkqmqhcwho:Qlalfqjsgh12!@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres\" -c \"SELECT COUNT(*) FROM daily_summaries;\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

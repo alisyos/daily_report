@@ -366,6 +366,24 @@ class GoogleSheetsService {
     }
   }
 
+  async getAllDailySummaries(): Promise<DailySummary[]> {
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: '일일보고요약!A2:B',
+      });
+
+      const rows = response.data.values || [];
+      return rows.map((row: string[]) => ({
+        date: row[0] || '',
+        summary: row[1] || '',
+      }));
+    } catch (error) {
+      console.error('Error fetching all daily summaries:', error);
+      return [];
+    }
+  }
+
   async getDailySummary(date: string): Promise<DailySummary | null> {
     try {
       const response = await this.sheets.spreadsheets.values.get({
@@ -375,7 +393,7 @@ class GoogleSheetsService {
 
       const rows = response.data.values || [];
       const summaryRow = rows.find((row: any[]) => row[0] === date);
-      
+
       if (summaryRow) {
         return {
           date: summaryRow[0] || '',

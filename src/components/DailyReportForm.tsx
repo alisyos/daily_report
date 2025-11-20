@@ -282,11 +282,16 @@ export default function DailyReportForm() {
     try {
       // Convert reports to flat structure for API
       const flatReports = reports.flatMap(report => {
+        // Find employee's department
+        const employee = employees.find(emp => emp.employeeName === report.employeeName);
+        const department = employee?.department || selectedDepartment;
+
         if (report.isOnLeave) {
           // 연차인 경우 workOverview를 '연차'로 설정
           return [{
             date: report.date,
             employeeName: report.employeeName,
+            department: department,
             workOverview: '연차',
             progressGoal: '-',
             achievementRate: 0,
@@ -296,15 +301,16 @@ export default function DailyReportForm() {
         } else {
           // 일반 업무 보고 - 내용이 있는 workItem만 필터링
           return report.workItems
-            .filter(workItem => 
-              workItem.workOverview.trim() || 
-              workItem.progressGoal.trim() || 
-              workItem.remarks.trim() || 
+            .filter(workItem =>
+              workItem.workOverview.trim() ||
+              workItem.progressGoal.trim() ||
+              workItem.remarks.trim() ||
               workItem.managerEvaluation.trim()
             )
             .map(workItem => ({
               date: report.date,
               employeeName: report.employeeName,
+              department: department,
               workOverview: workItem.workOverview,
               progressGoal: workItem.progressGoal,
               achievementRate: Number(workItem.achievementRate) || 0,

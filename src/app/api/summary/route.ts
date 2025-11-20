@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import GoogleSheetsService from '@/lib/google-sheets';
+import SupabaseService from '@/lib/supabase';
 
-const sheetsService = new GoogleSheetsService();
+const dbService = new SupabaseService();
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
-    
+
     if (!date) {
       return NextResponse.json({ error: 'Date parameter is required' }, { status: 400 });
     }
 
-    const summary = await sheetsService.getDailySummary(date);
+    const summary = await dbService.getDailySummary(date);
     return NextResponse.json(summary);
   } catch (error) {
     console.error('Error fetching daily summary:', error);
@@ -23,19 +23,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
-    
+
     // Validate required fields
     if (!data.date || !data.summary) {
       return NextResponse.json({ error: 'Date and summary are required' }, { status: 400 });
     }
 
     // Check if summary already exists for this date
-    const existingSummary = await sheetsService.getDailySummary(data.date);
-    
+    const existingSummary = await dbService.getDailySummary(data.date);
+
     if (existingSummary) {
       // Update existing summary
-      const success = await sheetsService.updateDailySummary(data.date, data);
-      
+      const success = await dbService.updateDailySummary(data.date, data);
+
       if (success) {
         return NextResponse.json({ message: 'Daily summary updated successfully' });
       } else {
@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Add new summary
-      const success = await sheetsService.addDailySummary(data);
-      
+      const success = await dbService.addDailySummary(data);
+
       if (success) {
         return NextResponse.json({ message: 'Daily summary added successfully' });
       } else {
@@ -60,14 +60,14 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const data = await request.json();
-    
+
     // Validate required fields
     if (!data.date || !data.summary) {
       return NextResponse.json({ error: 'Date and summary are required' }, { status: 400 });
     }
 
-    const success = await sheetsService.updateDailySummary(data.date, data);
-    
+    const success = await dbService.updateDailySummary(data.date, data);
+
     if (success) {
       return NextResponse.json({ message: 'Daily summary updated successfully' });
     } else {

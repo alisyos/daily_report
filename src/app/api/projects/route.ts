@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import GoogleSheetsService from '@/lib/google-sheets';
+import SupabaseService from '@/lib/supabase';
 
-const sheetsService = new GoogleSheetsService();
+const dbService = new SupabaseService();
 
 export async function GET() {
   try {
-    const projects = await sheetsService.getProjects();
+    const projects = await dbService.getProjects();
     return NextResponse.json(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -19,9 +19,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const projectData = await request.json();
-    
-    const success = await sheetsService.addProject(projectData);
-    
+
+    const success = await dbService.addProject(projectData);
+
     if (success) {
       return NextResponse.json({ message: 'Project added successfully' });
     } else {
@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const { projectId, project } = await request.json();
-    
-    const success = await sheetsService.updateProject(projectId, project);
-    
+
+    const success = await dbService.updateProject(projectId, project);
+
     if (success) {
       return NextResponse.json({ message: 'Project updated successfully' });
     } else {
@@ -65,9 +65,9 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { projectId } = await request.json();
-    
-    const success = await sheetsService.deleteProject(projectId);
-    
+
+    const success = await dbService.deleteProject(projectId);
+
     if (success) {
       return NextResponse.json({ message: 'Project deleted successfully' });
     } else {
