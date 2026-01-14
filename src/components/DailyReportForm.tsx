@@ -401,7 +401,7 @@ export default function DailyReportForm() {
             id="reportDate"
             value={reportDate}
             onChange={(e) => handleDateChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
           />
         </div>
 
@@ -413,7 +413,7 @@ export default function DailyReportForm() {
             id="department"
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
           >
             <option value="">부서를 선택하세요</option>
             {departments.map((dept) => (
@@ -453,7 +453,7 @@ export default function DailyReportForm() {
                   type="checkbox"
                   checked={selectedEmployees.includes(employee.employeeName)}
                   onChange={(e) => handleEmployeeSelection(employee.employeeName, e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
                 />
                 <span className="text-gray-700">
                   {employee.employeeName} ({employee.position})
@@ -512,7 +512,7 @@ export default function DailyReportForm() {
                             type="checkbox"
                             checked={report.isOnLeave}
                             onChange={() => handleLeaveToggle(employeeIndex)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
                           />
                           <span className="text-sm text-gray-600">연차</span>
                         </label>
@@ -562,7 +562,7 @@ export default function DailyReportForm() {
                                     value={workItem.workOverview}
                                     onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'workOverview', e.target.value)}
                                     rows={2}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                                     placeholder="수행한 업무를 입력하세요"
                                   />
                                 </div>
@@ -575,7 +575,7 @@ export default function DailyReportForm() {
                                     value={workItem.progressGoal}
                                     onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'progressGoal', e.target.value)}
                                     rows={2}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                                     placeholder="진행 목표를 입력하세요"
                                   />
                                 </div>
@@ -594,7 +594,7 @@ export default function DailyReportForm() {
                                     onFocus={(e) => e.target.select()}
                                     min="0"
                                     placeholder="0"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                                   />
                                 </div>
                               </div>
@@ -609,7 +609,7 @@ export default function DailyReportForm() {
                                     value={workItem.remarks}
                                     onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'remarks', e.target.value)}
                                     rows={2}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                                     placeholder="추가 사항이나 특이사항을 입력하세요"
                                   />
                                 </div>
@@ -622,7 +622,7 @@ export default function DailyReportForm() {
                                     value={workItem.managerEvaluation}
                                     onChange={(e) => handleWorkItemChange(employeeIndex, workItemIndex, 'managerEvaluation', e.target.value)}
                                     rows={2}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                                     placeholder="팀장 평가를 입력하세요"
                                   />
                                 </div>

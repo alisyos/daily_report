@@ -242,7 +242,7 @@ export default function ProjectList() {
               id="filterDepartment"
               value={filterDepartment}
               onChange={(e) => setFilterDepartment(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
             >
               <option value="">모든 부서</option>
               {departments.map((dept) => (
@@ -260,7 +260,7 @@ export default function ProjectList() {
               id="filterStatus"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
             >
               <option value="">모든 상태</option>
               {statusOptions.map((status) => (
@@ -280,7 +280,7 @@ export default function ProjectList() {
               value={filterProjectName}
               onChange={(e) => setFilterProjectName(e.target.value)}
               placeholder="프로젝트명 입력"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
             />
           </div>
           <div className="flex items-end gap-2">
@@ -445,7 +445,7 @@ export default function ProjectList() {
                   id="itemsPerPage"
                   value={itemsPerPage}
                   onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                  className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 >
                   <option value={20}>20개</option>
                   <option value={50}>50개</option>
@@ -546,7 +546,7 @@ export default function ProjectList() {
                   type="text"
                   value={formData.projectName || ''}
                   onChange={(e) => handleInputChange('projectName', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
 
@@ -556,7 +556,7 @@ export default function ProjectList() {
                   <select
                     value={formData.department || ''}
                     onChange={(e) => handleInputChange('department', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   >
                     <option value="">부서 선택</option>
                     {departments.map((dept) => (
@@ -572,7 +572,7 @@ export default function ProjectList() {
                     type="text"
                     value={formData.manager || ''}
                     onChange={(e) => handleInputChange('manager', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   />
                 </div>
               </div>
@@ -584,7 +584,7 @@ export default function ProjectList() {
                     type="date"
                     value={formData.targetEndDate || ''}
                     onChange={(e) => handleInputChange('targetEndDate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   />
                 </div>
                 <div>
@@ -593,7 +593,7 @@ export default function ProjectList() {
                     type="date"
                     value={formData.revisedEndDate || ''}
                     onChange={(e) => handleInputChange('revisedEndDate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   />
                 </div>
               </div>
@@ -604,7 +604,7 @@ export default function ProjectList() {
                   <select
                     value={formData.status || '진행중'}
                     onChange={(e) => handleInputChange('status', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   >
                     {statusOptions.map((status) => (
                       <option key={status} value={status}>
@@ -622,7 +622,7 @@ export default function ProjectList() {
                     min="0"
                     max="100"
                     placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   />
                 </div>
               </div>
@@ -633,7 +633,7 @@ export default function ProjectList() {
                   value={formData.mainIssues || ''}
                   onChange={(e) => handleInputChange('mainIssues', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
 
@@ -643,7 +643,7 @@ export default function ProjectList() {
                   value={formData.detailedProgress || ''}
                   onChange={(e) => handleInputChange('detailedProgress', e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
             </div>
@@ -829,7 +829,7 @@ export default function ProjectList() {
                   type="text"
                   value={formData.projectName || ''}
                   onChange={(e) => handleInputChange('projectName', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
 
@@ -839,7 +839,7 @@ export default function ProjectList() {
                   <select
                     value={formData.department || ''}
                     onChange={(e) => handleInputChange('department', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   >
                     <option value="">부서 선택</option>
                     {departments.map((dept) => (
@@ -855,7 +855,7 @@ export default function ProjectList() {
                     type="text"
                     value={formData.manager || ''}
                     onChange={(e) => handleInputChange('manager', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   />
                 </div>
               </div>
@@ -867,7 +867,7 @@ export default function ProjectList() {
                     type="date"
                     value={formData.targetEndDate || ''}
                     onChange={(e) => handleInputChange('targetEndDate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   />
                 </div>
                 <div>
@@ -876,7 +876,7 @@ export default function ProjectList() {
                     type="date"
                     value={formData.revisedEndDate || ''}
                     onChange={(e) => handleInputChange('revisedEndDate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   />
                 </div>
               </div>
@@ -887,7 +887,7 @@ export default function ProjectList() {
                   <select
                     value={formData.status || '진행중'}
                     onChange={(e) => handleInputChange('status', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   >
                     {statusOptions.map((status) => (
                       <option key={status} value={status}>
@@ -905,7 +905,7 @@ export default function ProjectList() {
                     min="0"
                     max="100"
                     placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   />
                 </div>
               </div>
@@ -916,7 +916,7 @@ export default function ProjectList() {
                   value={formData.mainIssues || ''}
                   onChange={(e) => handleInputChange('mainIssues', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
 
@@ -926,7 +926,7 @@ export default function ProjectList() {
                   value={formData.detailedProgress || ''}
                   onChange={(e) => handleInputChange('detailedProgress', e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
             </div>

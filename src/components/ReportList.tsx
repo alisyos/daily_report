@@ -667,7 +667,7 @@ export default function ReportList() {
               id="filterDate"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
             />
           </div>
           <div className="flex-1">
@@ -678,7 +678,7 @@ export default function ReportList() {
               id="filterDepartment"
               value={filterDepartment}
               onChange={(e) => setFilterDepartment(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
             >
               <option value="">모든 부서</option>
               {departments.map((dept) => (
@@ -698,7 +698,7 @@ export default function ReportList() {
               value={filterEmployee}
               onChange={(e) => setFilterEmployee(e.target.value)}
               placeholder="사원명 입력"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
             />
           </div>
           <div className="flex items-end">
@@ -768,7 +768,7 @@ export default function ReportList() {
                   value={summaryFormData}
                   onChange={(e) => setSummaryFormData(e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   placeholder="일일보고요약을 입력하세요..."
                 />
                 <div className="flex gap-2">
@@ -944,7 +944,7 @@ export default function ReportList() {
                     type="date"
                     value={editFormData.date}
                     onChange={(e) => handleEditInputChange('date', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   />
                 </div>
                 <div>
@@ -959,7 +959,7 @@ export default function ReportList() {
                   value={editFormData.workOverview}
                   onChange={(e) => handleEditInputChange('workOverview', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
 
@@ -969,7 +969,7 @@ export default function ReportList() {
                   value={editFormData.progressGoal}
                   onChange={(e) => handleEditInputChange('progressGoal', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
 
@@ -982,7 +982,7 @@ export default function ReportList() {
                     onChange={(e) => handleEditInputChange('achievementRate', e.target.value === '' ? 0 : Number(e.target.value))}
                     min="0"
                     placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                   />
                 </div>
               </div>
@@ -993,7 +993,7 @@ export default function ReportList() {
                   value={editFormData.remarks}
                   onChange={(e) => handleEditInputChange('remarks', e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
 
@@ -1003,7 +1003,7 @@ export default function ReportList() {
                   value={editFormData.managerEvaluation}
                   onChange={(e) => handleEditInputChange('managerEvaluation', e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
             </div>

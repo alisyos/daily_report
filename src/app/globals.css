@@ -17,6 +17,13 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+
+  /* Date picker calendar icon - invert for dark mode visibility */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+  }
 }
 
 body {

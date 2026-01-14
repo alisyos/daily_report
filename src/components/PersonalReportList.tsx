@@ -215,23 +215,23 @@ export default function PersonalReportList() {
         
         <div className="mb-4">
           <div className="flex gap-4 mb-3">
-            <label className="flex items-center">
+            <label className="flex items-center text-gray-700">
               <input
                 type="radio"
                 value="month"
                 checked={filterType === 'month'}
                 onChange={(e) => setFilterType(e.target.value as FilterType)}
-                className="mr-2"
+                className="mr-2 dark:bg-gray-700 dark:border-gray-600"
               />
               월 단위 선택
             </label>
-            <label className="flex items-center">
+            <label className="flex items-center text-gray-700">
               <input
                 type="radio"
                 value="custom"
                 checked={filterType === 'custom'}
                 onChange={(e) => setFilterType(e.target.value as FilterType)}
-                className="mr-2"
+                className="mr-2 dark:bg-gray-700 dark:border-gray-600"
               />
               직접 입력
             </label>
@@ -249,7 +249,7 @@ export default function PersonalReportList() {
                 id="filterMonth"
                 value={filterMonth}
                 onChange={(e) => setFilterMonth(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
               />
             </div>
           ) : (
@@ -263,7 +263,7 @@ export default function PersonalReportList() {
                   id="filterStartDate"
                   value={filterStartDate}
                   onChange={(e) => setFilterStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
               <div className="flex-1">
@@ -275,7 +275,7 @@ export default function PersonalReportList() {
                   id="filterEndDate"
                   value={filterEndDate}
                   onChange={(e) => setFilterEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                 />
               </div>
             </div>
@@ -293,7 +293,7 @@ export default function PersonalReportList() {
                 // 부서가 변경되면 사원명 필터 초기화
                 setFilterEmployee('');
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
             >
               <option value="">모든 부서</option>
               {departments.map((dept) => (
@@ -312,7 +312,7 @@ export default function PersonalReportList() {
               id="filterEmployee"
               value={filterEmployee}
               onChange={(e) => setFilterEmployee(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
             >
               <option value="">모든 사원</option>
               {employees
