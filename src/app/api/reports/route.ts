@@ -31,11 +31,9 @@ export async function POST(request: NextRequest) {
     const isUpdate = data.isUpdate || false;
     const reports = data.reports || (isBulk ? data : [data]);
 
-    // Inject companyId into each report
+    // Always set companyId from authenticated user (ignore client data for security)
     for (const report of reports) {
-      if (!report.companyId) {
-        report.companyId = user.companyId;
-      }
+      report.companyId = user.companyId;
     }
 
     // Validate each report
