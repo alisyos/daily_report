@@ -1,11 +1,27 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import EmployeeManagement from '@/components/admin/EmployeeManagement';
 import PromptManagement from '@/components/admin/PromptManagement';
+import CompanyManagement from '@/components/admin/CompanyManagement';
+import DepartmentManagement from '@/components/admin/DepartmentManagement';
+
+type TabType = 'employees' | 'prompts' | 'companies' | 'departments';
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'employees' | 'prompts'>('employees');
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabType>('employees');
+
+  if (!user || (user.role !== 'operator' && user.role !== 'manager')) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="text-center py-12 text-gray-500">
+          관리자 페이지에 접근할 수 없습니다.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -36,6 +52,34 @@ export default function AdminPage() {
           >
             프롬프트 관리
           </button>
+          {user.role === 'operator' && (
+            <button
+              onClick={() => setActiveTab('companies')}
+              className={`
+                py-4 px-1 border-b-2 font-medium text-sm
+                ${activeTab === 'companies'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }
+              `}
+            >
+              업체 관리
+            </button>
+          )}
+          {user.role === 'operator' && (
+            <button
+              onClick={() => setActiveTab('departments')}
+              className={`
+                py-4 px-1 border-b-2 font-medium text-sm
+                ${activeTab === 'departments'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }
+              `}
+            >
+              부서 관리
+            </button>
+          )}
         </nav>
       </div>
 
@@ -43,6 +87,8 @@ export default function AdminPage() {
       <div className="mt-6">
         {activeTab === 'employees' && <EmployeeManagement />}
         {activeTab === 'prompts' && <PromptManagement />}
+        {activeTab === 'companies' && user.role === 'operator' && <CompanyManagement />}
+        {activeTab === 'departments' && user.role === 'operator' && <DepartmentManagement />}
       </div>
     </div>
   );

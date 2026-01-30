@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import SupabaseService from '@/lib/supabase';
+import { getRequestUser, requireRole } from '@/lib/auth-helpers';
 
 const dbService = new SupabaseService();
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!requireRole(user, 'operator', 'manager')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const prompts = await dbService.getPrompts();
     return NextResponse.json(prompts);
   } catch (error) {
@@ -15,6 +22,12 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!requireRole(user, 'operator', 'manager')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id, prompt } = await request.json();
 
     if (!id || !prompt) {
@@ -36,6 +49,12 @@ export async function PUT(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!requireRole(user, 'operator', 'manager')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const prompt = await request.json();
 
     if (!prompt.promptKey || !prompt.promptName || !prompt.systemPrompt || !prompt.userPromptTemplate) {

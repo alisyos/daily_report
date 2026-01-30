@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getRequestUser } from '@/lib/auth-helpers';
 
 interface DailyReport {
   date: string;
@@ -13,14 +14,17 @@ interface DailyReport {
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
-      reports, 
-      filterType, 
-      filterMonth, 
-      filterStartDate, 
-      filterEndDate, 
-      filterDepartment, 
-      filterEmployee 
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const {
+      reports,
+      filterType,
+      filterMonth,
+      filterStartDate,
+      filterEndDate,
+      filterDepartment,
+      filterEmployee
     } = await request.json();
 
     if (!reports || reports.length === 0) {

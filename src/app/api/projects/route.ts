@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import SupabaseService from '@/lib/supabase';
+import { getRequestUser, getCompanyScope } from '@/lib/auth-helpers';
 
 const dbService = new SupabaseService();
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const projects = await dbService.getProjects();
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const companyId = getCompanyScope(user);
+    const projects = await dbService.getProjects(companyId);
     return NextResponse.json(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -18,7 +23,13 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const projectData = await request.json();
+    if (!projectData.companyId) {
+      projectData.companyId = user.companyId;
+    }
 
     const success = await dbService.addProject(projectData);
 
@@ -41,6 +52,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { projectId, project } = await request.json();
 
     const success = await dbService.updateProject(projectId, project);
@@ -64,6 +78,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { projectId } = await request.json();
 
     const success = await dbService.deleteProject(projectId);

@@ -3,57 +3,76 @@
 ## 프로젝트 개요
 Supabase PostgreSQL을 데이터베이스로 활용하는 종합 업무 관리 시스템입니다. Next.js 기반의 웹 애플리케이션으로 Vercel에 배포할 수 있도록 구성되어 있습니다.
 
-> **📢 v4.0 업데이트**: Google Sheets에서 Supabase로 마이그레이션되었습니다. 자세한 내용은 [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)를 참고하세요.
+> **📢 v5.0 업데이트**: 인증 시스템, 다중 업체 지원, 부서별 AI 요약 기능이 추가되었습니다.
 
 ## 기술 스택
 - **Frontend**: Next.js 14 (App Router), React 18, TypeScript
 - **Styling**: Tailwind CSS
 - **Database**: Supabase (PostgreSQL)
+- **Authentication**: JWT (jose), bcryptjs
+- **AI**: OpenAI GPT-4.1 API
 - **Deployment**: Vercel
 - **Date Utils**: date-fns
 - **Legacy**: Google Sheets API (v3.0 이하)
 
 ## 주요 기능
-1. **일일 업무 보고서 작성**: 사원들이 매일 업무 내용을 기록
-2. **보고서 목록 조회**: 날짜별, 부서별, 사원별 필터링 및 상세 보기
-3. **프로젝트 관리**: 프로젝트 등록, 수정, 삭제 및 진행률 관리
-4. **개인 업무 리포트**: 개인별 업무 성과 분석 및 리포트 생성
-5. **AI 자동 요약**: OpenAI API를 활용한 일일보고서 자동 요약 생성
-6. **PDF 내보내기**: 보고서를 PDF 형태로 내보내기 기능
-7. **페이지네이션**: 대용량 데이터 효율적 표시
+1. **인증 시스템**: JWT 기반 로그인, 역할별 접근 제어 (운영자/관리자/사용자)
+2. **다중 업체 지원**: 업체별 데이터 격리, 운영자의 전체 업체 관리
+3. **일일 업무 보고서 작성**: 사원들이 매일 업무 내용을 기록
+4. **보고서 목록 조회**: 날짜별, 부서별, 업체별, 사원별 필터링 및 상세 보기
+5. **부서별 AI 요약**: 부서 단위 GPT-4.1 기반 일일보고 요약 자동 생성
+6. **프로젝트 관리**: 프로젝트 등록, 수정, 삭제 및 진행률 관리
+7. **개인 업무 리포트**: 개인별 업무 성과 분석 및 리포트 생성
+8. **PDF 내보내기**: 부서별 요약 포함한 보고서 PDF 내보내기
+9. **페이지네이션**: 대용량 데이터 효율적 표시
 
 ## 시스템 구조
 
 ### Supabase 데이터베이스 구조
-시스템은 6개의 PostgreSQL 테이블로 구성됩니다:
+시스템은 8개의 PostgreSQL 테이블로 구성됩니다:
 
-1. **employees** (사원마스터)
+1. **companies** (업체관리) - v5.0 추가
+   - id (UUID), company_name, created_at
+   - 다중 업체 지원을 위한 업체 마스터
+
+2. **employees** (사원마스터)
    - id (UUID), employee_code, employee_name, position, department
-   - 인덱스: department, employee_name
+   - company_id (UUID, FK → companies) - v5.0 추가
+   - password_hash - v5.0 추가 (인증용)
+   - role ('operator' | 'manager' | 'user') - v5.0 추가
+   - 인덱스: department, employee_name, company_id
 
-2. **daily_reports** (일일업무관리)
+3. **daily_reports** (일일업무관리)
    - id (UUID), date, employee_name, department, work_overview, progress_goal
    - achievement_rate, manager_evaluation, remarks
-   - 인덱스: date, employee_name, department
+   - company_id (UUID, FK → companies) - v5.0 추가
+   - 인덱스: date, employee_name, department, company_id
 
-3. **projects** (프로젝트관리)
+4. **projects** (프로젝트관리)
    - id (UUID), project_name, department, manager, target_end_date, revised_end_date
    - status, progress_rate, main_issues, detailed_progress
-   - 인덱스: department, status, manager
+   - company_id (UUID, FK → companies) - v5.0 추가
+   - 인덱스: department, status, manager, company_id
 
-4. **daily_summaries** (일일보고요약)
-   - id (UUID), date (UNIQUE), summary
-   - 인덱스: date
+5. **daily_summaries** (일일보고요약)
+   - id (UUID), date, summary
+   - department (VARCHAR) - v5.0 추가 (부서별 요약 지원)
+   - UNIQUE(date, department) 제약조건 - v5.0 변경 (기존 UNIQUE(date)에서 변경)
+   - 인덱스: date, department
 
-5. **personal_reports** (개인보고서)
+6. **personal_reports** (개인보고서)
    - id (UUID), employee_name, period, total_reports, average_achievement_rate
    - main_achievements, improvements
    - 인덱스: employee_name, period
 
-6. **stats_dashboard** (통계대시보드)
+7. **stats_dashboard** (통계대시보드)
    - id (UUID), monthly_average_rate, weekly_average_rate, department_stats (JSONB)
    - calculated_at
    - 인덱스: calculated_at
+
+8. **prompts** (프롬프트관리) - v4.5 추가
+   - id (UUID), name, content, category
+   - AI 요약 생성에 사용되는 프롬프트 템플릿 관리
 
 ### 레거시 Google Sheets 구조 (v3.0 이하)
 <details>
@@ -75,18 +94,31 @@ daily-report-system/
 ├── src/
 │   ├── app/
 │   │   ├── api/
+│   │   │   ├── auth/                      # v5.0 인증 API
+│   │   │   │   ├── login/route.ts         # 로그인
+│   │   │   │   ├── logout/route.ts        # 로그아웃
+│   │   │   │   ├── me/route.ts            # 현재 사용자 조회
+│   │   │   │   └── change-password/route.ts # 비밀번호 변경
+│   │   │   ├── admin/
+│   │   │   │   ├── companies/route.ts     # v5.0 업체 관리 API (운영자 전용)
+│   │   │   │   ├── employees/
+│   │   │   │   │   ├── route.ts           # 사원 관리 API
+│   │   │   │   │   └── reset-password/route.ts # v5.0 비밀번호 초기화
+│   │   │   │   └── prompts/route.ts       # 프롬프트 관리 API
 │   │   │   ├── reports/route.ts           # 일일 보고서 API
 │   │   │   ├── employees/
-│   │   │   │   ├── route.ts              # 사원 목록 API
+│   │   │   │   ├── route.ts               # 사원 목록 API
 │   │   │   │   └── [department]/route.ts  # 부서별 사원 API
 │   │   │   ├── departments/route.ts       # 부서 목록 API
 │   │   │   ├── projects/route.ts          # 프로젝트 관리 API
 │   │   │   ├── stats/route.ts             # 통계 API
 │   │   │   ├── summary/
-│   │   │   │   ├── route.ts              # 일일 요약 API
-│   │   │   │   └── generate/route.ts      # AI 요약 생성 API
+│   │   │   │   ├── route.ts               # 일일 요약 API (부서별 지원)
+│   │   │   │   └── generate/route.ts      # 부서별 AI 요약 생성 API
 │   │   │   └── personal-summary/
-│   │   │       └── generate/route.ts      # 개인 리포트 생성 API
+│   │   │       ├── generate/route.ts      # 개인 리포트 생성 API
+│   │   │       └── generate-ai/route.ts   # AI 구조화 개인 리포트 생성
+│   │   ├── admin/page.tsx             # 관리자 페이지
 │   │   ├── create/page.tsx            # 보고서 작성 페이지
 │   │   ├── reports/page.tsx           # 보고서 목록 페이지
 │   │   ├── projects/page.tsx          # 프로젝트 관리 페이지
@@ -94,27 +126,41 @@ daily-report-system/
 │   │   ├── layout.tsx
 │   │   └── page.tsx                   # 메인 페이지
 │   ├── components/
-│   │   ├── ClientLayout.tsx           # 클라이언트 레이아웃
+│   │   ├── ClientLayout.tsx           # 클라이언트 레이아웃 (인증 상태 반영)
 │   │   ├── Login.tsx                  # 로그인 컴포넌트
 │   │   ├── DailyReportForm.tsx        # 보고서 작성 폼
-│   │   ├── ReportList.tsx            # 보고서 목록
-│   │   ├── ProjectList.tsx           # 프로젝트 목록
-│   │   ├── PersonalReportList.tsx    # 개인 리포트 목록
-│   │   ├── SummaryModal.tsx          # 기본 요약 모달
-│   │   └── SummaryModalAI.tsx        # AI 구조화 요약 모달
-│   └── lib/
-│       ├── supabase.ts               # Supabase 서비스 (v4.0+)
-│       └── google-sheets.ts          # Google Sheets 서비스 (레거시)
+│   │   ├── ReportList.tsx             # 보고서 목록 (업체필터, 부서별 요약)
+│   │   ├── ProjectList.tsx            # 프로젝트 목록
+│   │   ├── PersonalReportList.tsx     # 개인 리포트 목록
+│   │   ├── SummaryModal.tsx           # 기본 요약 모달
+│   │   ├── SummaryModalAI.tsx         # AI 구조화 요약 모달
+│   │   └── admin/
+│   │       ├── EmployeeManagement.tsx # 사원 관리 (관리자)
+│   │       └── CompanyManagement.tsx  # v5.0 업체 관리 (운영자)
+│   ├── contexts/
+│   │   └── AuthContext.tsx            # v5.0 인증 컨텍스트 (클라이언트)
+│   ├── lib/
+│   │   ├── supabase.ts                # Supabase 서비스
+│   │   ├── auth.ts                    # v5.0 JWT 인증 (서버)
+│   │   ├── auth-helpers.ts            # v5.0 인증 헬퍼 (요청에서 유저/스코프 추출)
+│   │   └── google-sheets.ts           # Google Sheets 서비스 (레거시)
+│   └── middleware.ts                  # v5.0 인증 미들웨어
 ├── supabase/
 │   └── migrations/
-│       └── 001_initial_schema.sql    # 데이터베이스 스키마
+│       ├── 001_initial_schema.sql     # 초기 스키마
+│       ├── 002_fix_constraints.sql    # 제약조건 수정
+│       ├── 003_clean_partial_data.sql # 데이터 정리
+│       ├── 004_create_prompts_table.sql # 프롬프트 테이블
+│       ├── 005_auth_and_companies.sql # v5.0 인증 및 업체 테이블
+│       └── 006_department_summaries.sql # v5.0 부서별 요약 지원
 ├── scripts/
-│   └── migrate-data.ts               # 데이터 마이그레이션 스크립트
-├── .env.local.example                # 환경변수 예시
-├── vercel.json                       # Vercel 배포 설정
-├── MIGRATION_GUIDE.md                # 마이그레이션 가이드
-├── CLAUDE.md                         # 개발 문서
-├── README.md                         # 프로젝트 설명서
+│   ├── migrate-data.ts                # 데이터 마이그레이션 스크립트
+│   └── setup-auth.ts                  # v5.0 인증 초기 설정
+├── .env.local.example                 # 환경변수 예시
+├── vercel.json                        # Vercel 배포 설정
+├── MIGRATION_GUIDE.md                 # 마이그레이션 가이드
+├── CLAUDE.md                          # 개발 문서
+├── README.md                          # 프로젝트 설명서
 └── package.json
 ```
 
@@ -129,12 +175,16 @@ npm install
 `.env.local.example`을 참조하여 `.env.local` 파일을 생성하고 다음 변수들을 설정합니다:
 
 ```env
-GOOGLE_SHEETS_ID=your_google_sheets_id
-GOOGLE_SERVICE_ACCOUNT_PROJECT_ID=your_project_id
-GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID=your_private_key_id
-GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour_private_key\n-----END PRIVATE KEY-----"
-GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL=your_service_account@your_project.iam.gserviceaccount.com
-GOOGLE_SERVICE_ACCOUNT_CLIENT_ID=your_client_id
+# Supabase 설정
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+
+# JWT 인증 (v5.0+)
+JWT_SECRET=your-jwt-secret-key
+
+# OpenAI API (AI 요약 기능용)
+OPENAI_API_KEY=your_openai_api_key
 ```
 
 ### 3. 로컬 실행
@@ -148,24 +198,31 @@ npm run build
 npm run type-check
 ```
 
-## Google Sheets 설정
+## Supabase 데이터베이스 설정
 
-### 1. Google Cloud Console 설정
-1. Google Cloud Console에서 프로젝트 생성
-2. Google Sheets API 활성화
-3. 서비스 계정 생성 및 키 다운로드
-4. 서비스 계정에 Google Sheets 편집 권한 부여
+### 1. 마이그레이션 실행
+Supabase SQL Editor에서 다음 마이그레이션 파일들을 순서대로 실행합니다:
 
-### 2. Google Sheets 준비
-1. 새 스프레드시트 생성
-2. 다음 6개 시트 생성:
-   - **일일업무관리**: 헤더 행에 "날짜, 사원명, 업무개요, 진행목표, 달성율(%), 팀장평가, 비고"
-   - **사원마스터**: 헤더 행에 "사원코드, 사원명, 직책, 부서"
-   - **통계대시보드**: 헤더 행에 "월별평균달성률, 주별평균달성률, 부서별통계"
-   - **일일보고요약**: 헤더 행에 "날짜, 요약내용"
-   - **프로젝트관리**: 헤더 행에 "프로젝트명, 부서, 담당자, 목표종료일, 수정종료일, 상태, 진행률(%), 주요이슈, 세부진행상황"
-   - **개인보고서**: 헤더 행에 "사원명, 기간, 총보고서수, 평균달성률, 주요성과, 개선사항"
-3. 서비스 계정 이메일에 시트 편집 권한 부여
+```
+supabase/migrations/001_initial_schema.sql     # 초기 스키마
+supabase/migrations/002_fix_constraints.sql    # 제약조건 수정
+supabase/migrations/003_clean_partial_data.sql # 데이터 정리
+supabase/migrations/004_create_prompts_table.sql # 프롬프트 테이블
+supabase/migrations/005_auth_and_companies.sql # 인증 및 업체 테이블
+supabase/migrations/006_department_summaries.sql # 부서별 요약 지원
+```
+
+### 2. 인증 초기 설정
+마이그레이션 005 적용 후:
+1. companies 테이블에 업체 등록
+2. employees 테이블에 company_id, role, password_hash 설정
+3. 운영자(operator) 계정은 수동으로 설정하거나 `scripts/setup-auth.ts` 사용
+
+### 3. 부서별 요약 설정 (v5.0)
+마이그레이션 006이 반드시 적용되어야 부서별 AI 요약 기능이 정상 동작합니다.
+- `daily_summaries` 테이블에 `department` 컬럼 추가
+- UNIQUE 제약조건이 `(date)` → `(date, department)`로 변경
+- 미적용 시 AI 요약 생성 API에서 500 에러 발생
 
 ## Vercel 배포
 
@@ -176,29 +233,59 @@ vercel --prod
 
 ### 2. 환경 변수 설정
 Vercel 대시보드에서 다음 환경 변수들을 설정:
-- `GOOGLE_SHEETS_ID`
-- `GOOGLE_SERVICE_ACCOUNT_PROJECT_ID`
-- `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID`
-- `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
-- `GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL`
-- `GOOGLE_SERVICE_ACCOUNT_CLIENT_ID`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `JWT_SECRET`
+- `OPENAI_API_KEY`
 
 ### 3. 배포 확인
 배포 후 각 기능이 정상 작동하는지 확인:
+- 로그인/인증 기능
 - 보고서 작성 기능
-- 보고서 목록 조회
+- 보고서 목록 조회 (업체 필터, 부서별 요약)
+- 부서별 AI 요약 생성
 - 통계 대시보드
+
+<details>
+<summary>레거시 Google Sheets 설정 (v3.0 이하)</summary>
+
+### Google Cloud Console 설정
+1. Google Cloud Console에서 프로젝트 생성
+2. Google Sheets API 활성화
+3. 서비스 계정 생성 및 키 다운로드
+4. 서비스 계정에 Google Sheets 편집 권한 부여
+
+### Google Sheets 준비
+1. 새 스프레드시트 생성
+2. 6개 시트 생성 (일일업무관리, 사원마스터, 통계대시보드, 일일보고요약, 프로젝트관리, 개인보고서)
+3. 서비스 계정 이메일에 시트 편집 권한 부여
+</details>
 
 ## API 엔드포인트
 
+> 모든 API는 JWT 인증 필수 (v5.0+). `auth-token` 쿠키로 인증.
+
+### Auth API (`/api/auth`) - v5.0 추가
+- `/api/auth/login` `POST`: 로그인 (JWT 토큰 발급)
+- `/api/auth/logout` `POST`: 로그아웃 (쿠키 삭제)
+- `/api/auth/me` `GET`: 현재 로그인 사용자 정보 조회
+- `/api/auth/change-password` `POST`: 비밀번호 변경
+
+### Admin API (`/api/admin`) - v5.0 추가
+- `/api/admin/companies` `GET/POST/PUT/DELETE`: 업체 CRUD (운영자 전용)
+- `/api/admin/employees` `GET/POST/PUT/DELETE`: 사원 관리
+- `/api/admin/employees/reset-password` `POST`: 사원 비밀번호 초기화 (운영자 전용)
+- `/api/admin/prompts` `GET/POST/PUT/DELETE`: AI 프롬프트 관리
+
 ### Reports API (`/api/reports`)
-- `GET`: 모든 보고서 조회
+- `GET`: 보고서 조회 (업체/부서 스코프 자동 적용)
 - `POST`: 새 보고서 등록
 - `PUT`: 기존 보고서 수정
 - `DELETE`: 보고서 삭제
 
 ### Employees API (`/api/employees`)
-- `GET`: 사원 목록 조회
+- `GET`: 사원 목록 조회 (업체 스코프 적용)
 - `/api/employees/[department]`: 부서별 사원 조회
 
 ### Departments API (`/api/departments`)
@@ -210,10 +297,13 @@ Vercel 대시보드에서 다음 환경 변수들을 설정:
 - `PUT`: 프로젝트 수정
 - `DELETE`: 프로젝트 삭제
 
-### Summary API (`/api/summary`)
+### Summary API (`/api/summary`) - v5.0 수정
 - `GET`: 일일 요약 조회
-- `POST`: 일일 요약 저장/수정
-- `/api/summary/generate`: AI 자동 요약 생성
+  - `?date=YYYY-MM-DD`: 해당 날짜의 모든 부서별 요약 배열 반환
+  - `?date=YYYY-MM-DD&department=부서명`: 특정 부서 요약 단건 반환
+- `POST`: 부서별 일일 요약 저장 (upsert)
+- `PUT`: 부서별 일일 요약 수정 (upsert)
+- `/api/summary/generate` `POST`: 부서별 AI 요약 생성 (`{date, department}` 필수)
 
 ### Personal Summary API (`/api/personal-summary`)
 - `/api/personal-summary/generate`: 기본 개인 리포트 생성
@@ -224,16 +314,31 @@ Vercel 대시보드에서 다음 환경 변수들을 설정:
 
 ## 데이터 구조
 
+### AuthUser (v5.0 추가)
+```typescript
+interface AuthUser {
+  id: string;
+  email: string;
+  employeeName: string;
+  role: 'operator' | 'manager' | 'user';
+  companyId: string;
+  companyName: string;
+  department: string;
+}
+```
+
 ### DailyReport
 ```typescript
 interface DailyReport {
   date: string;
   employeeName: string;
+  department: string;
   workOverview: string;
   progressGoal: string;
   achievementRate: number;
   managerEvaluation: 'excellent' | 'good' | 'needs_improvement';
   remarks: string;
+  companyId?: string;  // v5.0 추가
 }
 ```
 
@@ -244,6 +349,8 @@ interface Employee {
   employeeName: string;
   position: string;
   department: string;
+  companyId?: string;    // v5.0 추가
+  companyName?: string;  // v5.0 추가
 }
 ```
 
@@ -266,8 +373,12 @@ interface Project {
 ### DailySummary
 ```typescript
 interface DailySummary {
+  id?: string;
   date: string;
+  department?: string;  // v5.0 추가 (부서별 요약)
   summary: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 ```
 
@@ -294,23 +405,31 @@ interface StatsDashboard {
 - 구조화된 UI로 시각적 요약 결과 제공
 - 개인별 성과 분석 및 맞춤형 제안
 
-### 3. 실시간 동기화
-- Google Sheets API를 통한 실시간 데이터 동기화
-- 여러 사용자가 동시에 접근 가능
-- 데이터 일관성 보장
+### 3. 인증 및 접근 제어 (v5.0)
+- JWT 기반 인증 (jose 라이브러리)
+- 역할 기반 접근 제어: 운영자(operator), 관리자(manager), 사용자(user)
+- 운영자: 전체 업체/사원 관리, 모든 데이터 접근
+- 관리자: 자사 부서 범위 데이터 관리
+- 사용자: 자사 데이터 조회, 본인 부서 요약 생성
+- 미들웨어를 통한 API 라우트 보호
 
-### 4. 반응형 디자인
+### 4. 다중 업체 지원 (v5.0)
+- 업체별 데이터 격리 (company_id 기반)
+- 운영자 전용 업체 관리 및 업체 필터
+- 부서 구분 행에 "업체명 / 부서명" 형태 표시
+
+### 5. 반응형 디자인
 - 모바일 및 데스크톱 환경 모두 지원
 - Tailwind CSS를 활용한 현대적 UI
 - 직관적인 사용자 인터페이스
 
-### 5. 고급 기능
+### 6. 고급 기능
 - 페이지네이션으로 대용량 데이터 효율적 처리
 - 다양한 필터링 및 검색 옵션
 - PDF 내보내기 기능
 - 로딩 상태 표시 및 중복 작업 방지
 
-### 6. 데이터 검증 및 보안
+### 7. 데이터 검증 및 보안
 - 클라이언트 및 서버 측 데이터 검증
 - 달성률 범위 제한 (0-100%)
 - 필수 필드 검증
@@ -337,24 +456,61 @@ interface StatsDashboard {
 
 ## 문제 해결
 
-### 1. Google Sheets API 인증 오류
-- 서비스 계정 키 파일 확인
-- 환경 변수 설정 검증
-- Google Sheets 권한 확인
+### 1. AI 요약 생성 500 에러
+- **가장 흔한 원인**: `006_department_summaries.sql` 마이그레이션 미적용
+- Supabase SQL Editor에서 마이그레이션 006 실행 필요
+- `daily_summaries` 테이블에 `department` 컬럼이 존재하는지 확인
+- `UNIQUE(date, department)` 제약조건이 적용되었는지 확인
+- `OPENAI_API_KEY` 환경변수 설정 확인
 
-### 2. Vercel 배포 오류
-- 환경 변수 설정 확인
+### 2. 인증 관련 오류
+- `JWT_SECRET` 환경변수 설정 확인
+- 쿠키가 정상적으로 설정되는지 확인 (HttpOnly, SameSite=Lax)
+- 운영자 계정이 employees 테이블에 올바른 role과 password_hash로 설정되어 있는지 확인
+
+### 3. 업체 필터 표시 안됨
+- 운영자(operator) 역할로 로그인했는지 확인
+- `/api/admin/companies` API가 정상 응답하는지 확인
+- companies 테이블에 데이터가 존재하는지 확인
+
+### 4. Vercel 배포 오류
+- 환경 변수 설정 확인 (특히 JWT_SECRET, OPENAI_API_KEY)
 - 빌드 에러 로그 확인
 - API 함수 타임아웃 설정
 
-### 3. 데이터 동기화 문제
-- Google Sheets 구조 확인
-- 시트 이름 및 범위 검증
-- 네트워크 연결 상태 확인
-
 ## 새로운 기능 및 개선사항
 
-### 최근 업데이트 (v3.0)
+### 최근 업데이트 (v5.0) - 인증, 다중 업체, 부서별 요약
+1. **JWT 인증 시스템**
+   - jose + bcryptjs 기반 JWT 인증
+   - 역할 기반 접근 제어 (operator/manager/user)
+   - 미들웨어를 통한 API 라우트 보호
+   - 비밀번호 변경/초기화 기능
+
+2. **다중 업체 지원**
+   - companies 테이블 추가, 업체별 데이터 격리
+   - 운영자 전용 업체 관리 페이지
+   - 보고서 목록에 운영자 전용 업체 필터 드롭다운
+   - 부서 구분 행에 "업체명 / 부서명" 표시
+
+3. **부서별 AI 요약**
+   - 기존 전체 일일요약 → 부서별 개별 요약으로 변경
+   - 각 부서 구분 행 아래에 인라인 요약 영역
+   - 부서별 "AI 자동생성" 및 "직접작성/수정" 버튼
+   - upsert 방식으로 atomic한 요약 저장/갱신
+   - 운영자: 모든 부서 요약 생성 가능
+   - 관리자/사용자: 본인 부서만 요약 생성 가능
+
+4. **DB 마이그레이션**
+   - 005: 인증 및 업체 테이블 (companies, employees 확장)
+   - 006: daily_summaries에 department 컬럼 추가, UNIQUE(date, department) 제약조건
+
+### 이전 업데이트 (v4.0) - Supabase 마이그레이션
+- Google Sheets → Supabase PostgreSQL 마이그레이션
+- 성능 향상 및 관계형 데이터베이스 활용
+- 자동 마이그레이션 스크립트
+
+### 이전 업데이트 (v3.0)
 1. **고도화된 AI 요약 시스템**
    - GPT-4.1 모델 적용으로 성능 향상
    - JSON 구조화 응답으로 체계적 데이터 처리
@@ -373,7 +529,7 @@ interface StatsDashboard {
    - useEffect를 활용한 실시간 유효성 검사
 
 4. **UI/UX 개선**
-   - 그라데이션 헤더와 모던한 모달 디자인  
+   - 그라데이션 헤더와 모던한 모달 디자인
    - 태그 스타일 필터 정보 표시
    - 반응형 레이아웃과 부드러운 애니메이션
    - 로딩 상태와 에러 처리 강화
@@ -410,8 +566,8 @@ interface StatsDashboard {
 - 모바일 앱 개발
 
 ### 2. 보안 강화
-- OAuth 2.0 인증 시스템
-- 역할 기반 접근 제어 (RBAC)
+- ~~역할 기반 접근 제어 (RBAC)~~ → v5.0에서 구현 완료
+- OAuth 2.0 소셜 로그인 연동
 - 데이터 암호화 및 백업
 - 감사 로그 시스템
 
@@ -426,6 +582,32 @@ interface StatsDashboard {
 - 이메일 자동 발송
 - 캘린더 통합
 - 다국어 지원
+
+## 진행중인 작업 (WIP)
+
+### v5.0 배포 전 필수 확인사항
+1. **DB 마이그레이션 006 적용**: Supabase SQL Editor에서 `supabase/migrations/006_department_summaries.sql` 실행
+   - 미적용 시 부서별 AI 요약 생성에서 500 에러 발생
+   - 마이그레이션은 동적 SQL로 기존 UNIQUE(date) 제약조건을 자동 탐색/제거
+2. **AI 요약 생성 재테스트**: 마이그레이션 006 적용 후 부서별 AI 자동생성 기능 테스트
+3. **운영자 계정 설정**: employees 테이블에 운영자 역할 계정이 정상 설정되어 있는지 확인
+4. **전체 기능 통합 테스트**:
+   - 운영자: 업체 필터, 전체 부서 요약 생성
+   - 관리자: 자사 부서 요약 생성
+   - 사용자: 본인 부서 요약 확인
+   - PDF 다운로드에 부서별 요약 포함 여부
+
+### 주요 변경 파일 (v5.0)
+- `supabase/migrations/005_auth_and_companies.sql` - 인증 및 업체 테이블
+- `supabase/migrations/006_department_summaries.sql` - 부서별 요약 지원
+- `src/lib/auth.ts` - JWT 인증 로직
+- `src/lib/auth-helpers.ts` - 요청에서 유저/스코프 추출 헬퍼
+- `src/lib/supabase.ts` - DailySummary 인터페이스 및 upsert 메서드 추가
+- `src/middleware.ts` - 인증 미들웨어
+- `src/contexts/AuthContext.tsx` - 클라이언트 인증 컨텍스트
+- `src/app/api/summary/route.ts` - 부서별 요약 API
+- `src/app/api/summary/generate/route.ts` - 부서별 AI 요약 생성 API
+- `src/components/ReportList.tsx` - 업체 필터, 부서 표시명, 부서별 요약 UI
 
 ## 라이센스
 이 프로젝트는 MIT 라이센스를 따릅니다.

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Employee {
   employeeCode: string;
@@ -26,6 +27,8 @@ interface DailyReportFormData {
 }
 
 export default function DailyReportForm() {
+  const { user } = useAuth();
+  const isOperator = user?.role === 'operator';
   const [departments, setDepartments] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -41,6 +44,13 @@ export default function DailyReportForm() {
   useEffect(() => {
     fetchDepartments();
   }, []);
+
+  // 관리자/사용자는 본인 부서로 자동 고정
+  useEffect(() => {
+    if (user && !isOperator && user.department) {
+      setSelectedDepartment(user.department);
+    }
+  }, [user, isOperator]);
 
   useEffect(() => {
     if (selectedDepartment) {
@@ -409,19 +419,28 @@ export default function DailyReportForm() {
           <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
             부서 선택
           </label>
-          <select
-            id="department"
-            value={selectedDepartment}
-            onChange={(e) => setSelectedDepartment(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
-          >
-            <option value="">부서를 선택하세요</option>
-            {departments.map((dept) => (
-              <option key={dept} value={dept}>
-                {dept}
-              </option>
-            ))}
-          </select>
+          {isOperator ? (
+            <select
+              id="department"
+              value={selectedDepartment}
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
+            >
+              <option value="">부서를 선택하세요</option>
+              {departments.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={selectedDepartment}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 cursor-not-allowed"
+            />
+          )}
         </div>
       </div>
 
@@ -642,7 +661,7 @@ export default function DailyReportForm() {
             <button
               type="button"
               onClick={() => {
-                setSelectedDepartment('');
+                if (isOperator) setSelectedDepartment('');
                 setEmployees([]);
                 setSelectedEmployees([]);
                 setReports([]);

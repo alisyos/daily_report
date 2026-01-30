@@ -11,6 +11,7 @@ export interface DailyReport {
   achievementRate: number;
   managerEvaluation: string;
   remarks: string;
+  companyId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -21,6 +22,18 @@ export interface Employee {
   employeeName: string;
   position: string;
   department: string;
+  companyId?: string;
+  companyName?: string;
+  email?: string;
+  passwordHash?: string;
+  role?: 'operator' | 'manager' | 'user';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Company {
+  id?: string;
+  companyName: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -37,6 +50,7 @@ export interface StatsDashboard {
 export interface DailySummary {
   id?: string;
   date: string;
+  department?: string;
   summary: string;
   createdAt?: string;
   updatedAt?: string;
@@ -53,6 +67,7 @@ export interface Project {
   progressRate: number;
   mainIssues: string;
   detailedProgress: string;
+  companyId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -76,6 +91,15 @@ export interface Prompt {
   description?: string;
   systemPrompt: string;
   userPromptTemplate: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Department {
+  id?: string;
+  departmentName: string;
+  companyId: string;
+  companyName?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -130,12 +154,16 @@ class SupabaseService {
   }
 
   // Daily Reports Methods
-  async getDailyReports(): Promise<DailyReport[]> {
+  async getDailyReports(companyId?: string, department?: string): Promise<DailyReport[]> {
     try {
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from('daily_reports')
-        .select('*')
-        .order('date', { ascending: false });
+        .select('*');
+
+      if (companyId) query = query.eq('company_id', companyId);
+      if (department) query = query.eq('department', department);
+
+      const { data, error } = await query.order('date', { ascending: false });
 
       if (error) throw error;
 
@@ -226,16 +254,39 @@ class SupabaseService {
   }
 
   // Employee Methods
-  async getEmployees(): Promise<Employee[]> {
+  async getEmployees(companyId?: string, department?: string): Promise<Employee[]> {
     try {
-      const { data, error } = await this.supabase
+      // Try with companies join (explicit FK hint for PostgREST schema cache)
+      let query = this.supabase
         .from('employees')
-        .select('*')
-        .order('employee_code', { ascending: true });
+        .select('*, companies!company_id(company_name)');
 
-      if (error) throw error;
+      if (companyId) query = query.eq('company_id', companyId);
+      if (department) query = query.eq('department', department);
 
-      return convertKeysToCamelCase(data || []);
+      const { data, error } = await query.order('employee_code', { ascending: true });
+
+      if (error) {
+        // Fallback: fetch without join if relationship not found
+        console.warn('Companies join failed, fetching without join:', error.message);
+        let fallbackQuery = this.supabase
+          .from('employees')
+          .select('*');
+        if (companyId) fallbackQuery = fallbackQuery.eq('company_id', companyId);
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery.order('employee_code', { ascending: true });
+        if (fallbackError) throw fallbackError;
+        return convertKeysToCamelCase(fallbackData || []);
+      }
+
+      return (data || []).map((row: any) => {
+        const converted = convertKeysToCamelCase(row);
+        // Flatten the companies join
+        if (row.companies) {
+          converted.companyName = row.companies.company_name;
+        }
+        delete converted.companies;
+        return converted;
+      });
     } catch (error) {
       console.error('Error fetching employees:', error);
       return [];
@@ -244,7 +295,8 @@ class SupabaseService {
 
   async addEmployee(employee: Employee): Promise<boolean> {
     try {
-      const dbEmployee = convertKeysToSnakeCase(employee);
+      const { id: _id, companyName, password, ...cleanEmployee } = employee as any;
+      const dbEmployee = convertKeysToSnakeCase(cleanEmployee);
       const { error } = await this.supabase
         .from('employees')
         .insert([dbEmployee]);
@@ -259,7 +311,9 @@ class SupabaseService {
 
   async updateEmployee(id: string, employee: Employee): Promise<boolean> {
     try {
-      const dbEmployee = convertKeysToSnakeCase(employee);
+      // Strip fields that are not actual columns in the employees table
+      const { id: _id, companyName, password, ...cleanEmployee } = employee as any;
+      const dbEmployee = convertKeysToSnakeCase(cleanEmployee);
       const { error } = await this.supabase
         .from('employees')
         .update(dbEmployee)
@@ -273,29 +327,52 @@ class SupabaseService {
     }
   }
 
-  async getEmployeesByDepartment(department: string): Promise<Employee[]> {
+  async getEmployeesByDepartment(department: string, companyId?: string): Promise<Employee[]> {
     try {
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from('employees')
-        .select('*')
-        .eq('department', department)
-        .order('employee_code', { ascending: true });
+        .select('*, companies!company_id(company_name)')
+        .eq('department', department);
 
-      if (error) throw error;
+      if (companyId) query = query.eq('company_id', companyId);
 
-      return convertKeysToCamelCase(data || []);
+      const { data, error } = await query.order('employee_code', { ascending: true });
+
+      if (error) {
+        console.warn('Companies join failed, fetching without join:', error.message);
+        let fallbackQuery = this.supabase
+          .from('employees')
+          .select('*')
+          .eq('department', department);
+        if (companyId) fallbackQuery = fallbackQuery.eq('company_id', companyId);
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery.order('employee_code', { ascending: true });
+        if (fallbackError) throw fallbackError;
+        return convertKeysToCamelCase(fallbackData || []);
+      }
+
+      return (data || []).map((row: any) => {
+        const converted = convertKeysToCamelCase(row);
+        if (row.companies) {
+          converted.companyName = row.companies.company_name;
+        }
+        delete converted.companies;
+        return converted;
+      });
     } catch (error) {
       console.error('Error fetching employees by department:', error);
       return [];
     }
   }
 
-  async getDepartments(): Promise<string[]> {
+  async getDepartments(companyId?: string): Promise<string[]> {
     try {
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from('employees')
-        .select('department')
-        .order('department', { ascending: true });
+        .select('department');
+
+      if (companyId) query = query.eq('company_id', companyId);
+
+      const { data, error } = await query.order('department', { ascending: true });
 
       if (error) throw error;
 
@@ -308,12 +385,15 @@ class SupabaseService {
   }
 
   // Project Methods
-  async getProjects(): Promise<Project[]> {
+  async getProjects(companyId?: string): Promise<Project[]> {
     try {
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+
+      if (companyId) query = query.eq('company_id', companyId);
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -371,13 +451,20 @@ class SupabaseService {
   }
 
   // Daily Summary Methods
-  async getDailySummary(date: string): Promise<DailySummary | null> {
+  async getDailySummary(date: string, department?: string): Promise<DailySummary | null> {
     try {
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from('daily_summaries')
         .select('*')
-        .eq('date', date)
-        .single();
+        .eq('date', date);
+
+      if (department) {
+        query = query.eq('department', department);
+      } else {
+        query = query.is('department', null);
+      }
+
+      const { data, error } = await query.single();
 
       if (error) {
         if (error.code === 'PGRST116') return null; // Not found
@@ -388,6 +475,23 @@ class SupabaseService {
     } catch (error) {
       console.error('Error fetching daily summary:', error);
       return null;
+    }
+  }
+
+  async getDailySummaries(date: string): Promise<DailySummary[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('daily_summaries')
+        .select('*')
+        .eq('date', date)
+        .order('department', { ascending: true });
+
+      if (error) throw error;
+
+      return convertKeysToCamelCase(data || []);
+    } catch (error) {
+      console.error('Error fetching daily summaries:', error);
+      return [];
     }
   }
 
@@ -421,16 +525,37 @@ class SupabaseService {
     }
   }
 
+  async upsertDailySummary(summary: DailySummary): Promise<boolean> {
+    try {
+      const dbSummary = convertKeysToSnakeCase(summary);
+      const { error } = await this.supabase
+        .from('daily_summaries')
+        .upsert([dbSummary], { onConflict: 'date,department' });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error upserting daily summary:', error);
+      return false;
+    }
+  }
+
   async updateDailySummary(date: string, summary: DailySummary): Promise<boolean> {
     try {
       const dbSummary = convertKeysToSnakeCase(summary);
 
-      // Try to update first
-      const { data, error: updateError } = await this.supabase
+      let query = this.supabase
         .from('daily_summaries')
         .update(dbSummary)
-        .eq('date', date)
-        .select();
+        .eq('date', date);
+
+      if (summary.department) {
+        query = query.eq('department', summary.department);
+      } else {
+        query = query.is('department', null);
+      }
+
+      const { data, error: updateError } = await query.select();
 
       // If no rows were updated, insert a new one
       if (!updateError && (!data || data.length === 0)) {
@@ -609,6 +734,234 @@ class SupabaseService {
     } catch (error) {
       console.error('Error deleting employee:', error);
       return false;
+    }
+  }
+
+  // Auth-related Employee Methods
+  async getEmployeeByEmail(email: string): Promise<Employee | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('employees')
+        .select('*, companies!company_id(company_name)')
+        .eq('email', email)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return null;
+        // Fallback: fetch without join if relationship not found
+        console.warn('Companies join failed in getEmployeeByEmail, fetching without join:', error.message);
+        const { data: fallbackData, error: fallbackError } = await this.supabase
+          .from('employees')
+          .select('*')
+          .eq('email', email)
+          .single();
+        if (fallbackError) {
+          if (fallbackError.code === 'PGRST116') return null;
+          throw fallbackError;
+        }
+        return convertKeysToCamelCase(fallbackData);
+      }
+
+      const converted = convertKeysToCamelCase(data);
+      if (data.companies) {
+        converted.companyName = data.companies.company_name;
+      }
+      delete converted.companies;
+      return converted;
+    } catch (error) {
+      console.error('Error fetching employee by email:', error);
+      return null;
+    }
+  }
+
+  async updateEmployeePassword(id: string, passwordHash: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('employees')
+        .update({ password_hash: passwordHash })
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating employee password:', error);
+      return false;
+    }
+  }
+
+  // Company Methods
+  async getCompanies(): Promise<Company[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('companies')
+        .select('*')
+        .order('company_name', { ascending: true });
+
+      if (error) throw error;
+
+      return convertKeysToCamelCase(data || []);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+      return [];
+    }
+  }
+
+  async addCompany(company: Omit<Company, 'id'>): Promise<Company | null> {
+    try {
+      const dbCompany = convertKeysToSnakeCase(company);
+      const { data, error } = await this.supabase
+        .from('companies')
+        .insert([dbCompany])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return convertKeysToCamelCase(data);
+    } catch (error) {
+      console.error('Error adding company:', error);
+      return null;
+    }
+  }
+
+  async updateCompany(id: string, company: Partial<Company>): Promise<boolean> {
+    try {
+      const dbCompany = convertKeysToSnakeCase(company);
+      const { error } = await this.supabase
+        .from('companies')
+        .update(dbCompany)
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating company:', error);
+      return false;
+    }
+  }
+
+  async deleteCompany(id: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('companies')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      return false;
+    }
+  }
+
+  // Department Methods
+  async getDepartmentsFromTable(companyId?: string): Promise<Department[]> {
+    try {
+      let query = this.supabase
+        .from('departments')
+        .select('*, companies!company_id(company_name)');
+
+      if (companyId) query = query.eq('company_id', companyId);
+
+      const { data, error } = await query.order('department_name', { ascending: true });
+
+      if (error) {
+        console.warn('Departments query failed, fetching without join:', error.message);
+        let fallbackQuery = this.supabase
+          .from('departments')
+          .select('*');
+        if (companyId) fallbackQuery = fallbackQuery.eq('company_id', companyId);
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery.order('department_name', { ascending: true });
+        if (fallbackError) throw fallbackError;
+        return convertKeysToCamelCase(fallbackData || []);
+      }
+
+      return (data || []).map((row: any) => {
+        const converted = convertKeysToCamelCase(row);
+        if (row.companies) {
+          converted.companyName = row.companies.company_name;
+        }
+        delete converted.companies;
+        return converted;
+      });
+    } catch (error) {
+      console.error('Error fetching departments from table:', error);
+      return [];
+    }
+  }
+
+  async addDepartment(department: Omit<Department, 'id'>): Promise<Department | null> {
+    try {
+      const { companyName, ...cleanDepartment } = department as any;
+      const dbDepartment = convertKeysToSnakeCase(cleanDepartment);
+      const { data, error } = await this.supabase
+        .from('departments')
+        .insert([dbDepartment])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return convertKeysToCamelCase(data);
+    } catch (error) {
+      console.error('Error adding department:', error);
+      return null;
+    }
+  }
+
+  async updateDepartment(id: string, department: Partial<Department>): Promise<boolean> {
+    try {
+      const { companyName, ...cleanDepartment } = department as any;
+      const dbDepartment = convertKeysToSnakeCase(cleanDepartment);
+      const { error } = await this.supabase
+        .from('departments')
+        .update(dbDepartment)
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating department:', error);
+      return false;
+    }
+  }
+
+  async deleteDepartment(id: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('departments')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting department:', error);
+      return false;
+    }
+  }
+
+  async getDepartmentById(id: string): Promise<Department | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('departments')
+        .select('*, companies!company_id(company_name)')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+      }
+
+      const converted = convertKeysToCamelCase(data);
+      if (data.companies) {
+        converted.companyName = data.companies.company_name;
+      }
+      delete converted.companies;
+      return converted;
+    } catch (error) {
+      console.error('Error fetching department by id:', error);
+      return null;
     }
   }
 }

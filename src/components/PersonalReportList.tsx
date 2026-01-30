@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import SummaryModalAI from './SummaryModalAI';
 
 interface DailyReport {
@@ -25,6 +26,8 @@ interface Employee {
 type FilterType = 'month' | 'custom';
 
 export default function PersonalReportList() {
+  const { user } = useAuth();
+  const isOperator = user?.role === 'operator';
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
@@ -42,6 +45,13 @@ export default function PersonalReportList() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // 관리자/사용자는 본인 부서로 자동 고정
+  useEffect(() => {
+    if (user && !isOperator && user.department) {
+      setFilterDepartment(user.department);
+    }
+  }, [user, isOperator]);
 
   // 부서 필터가 변경될 때 사원 필터 유효성 검사
   useEffect(() => {
@@ -281,28 +291,30 @@ export default function PersonalReportList() {
             </div>
           )}
           
-          <div className="flex-1">
-            <label htmlFor="filterDepartment" className="block text-sm font-medium text-gray-700 mb-1">
-              부서 필터
-            </label>
-            <select
-              id="filterDepartment"
-              value={filterDepartment}
-              onChange={(e) => {
-                setFilterDepartment(e.target.value);
-                // 부서가 변경되면 사원명 필터 초기화
-                setFilterEmployee('');
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
-            >
-              <option value="">모든 부서</option>
-              {departments.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isOperator && (
+            <div className="flex-1">
+              <label htmlFor="filterDepartment" className="block text-sm font-medium text-gray-700 mb-1">
+                부서 필터
+              </label>
+              <select
+                id="filterDepartment"
+                value={filterDepartment}
+                onChange={(e) => {
+                  setFilterDepartment(e.target.value);
+                  // 부서가 변경되면 사원명 필터 초기화
+                  setFilterEmployee('');
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
+              >
+                <option value="">모든 부서</option>
+                {departments.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           
           <div className="flex-1">
             <label htmlFor="filterEmployee" className="block text-sm font-medium text-gray-700 mb-1">
@@ -343,7 +355,7 @@ export default function PersonalReportList() {
                 setFilterMonth(new Date().toISOString().slice(0, 7));
                 setFilterStartDate('');
                 setFilterEndDate('');
-                setFilterDepartment('');
+                if (isOperator) setFilterDepartment('');
                 setFilterEmployee('');
                 setFilterType('month');
               }}

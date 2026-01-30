@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Project {
   id: string;
@@ -16,6 +17,8 @@ interface Project {
 }
 
 export default function ProjectList() {
+  const { user } = useAuth();
+  const isOperator = user?.role === 'operator';
   const [projects, setProjects] = useState<Project[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [filterDepartment, setFilterDepartment] = useState('');
@@ -49,6 +52,13 @@ export default function ProjectList() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // 관리자/사용자는 본인 부서로 자동 고정
+  useEffect(() => {
+    if (user && !isOperator && user.department) {
+      setFilterDepartment(user.department);
+    }
+  }, [user, isOperator]);
 
   const fetchData = async () => {
     try {
@@ -95,7 +105,7 @@ export default function ProjectList() {
   const handleAddProject = () => {
     setFormData({
       projectName: '',
-      department: departments[0] || '',
+      department: !isOperator && user?.department ? user.department : (departments[0] || ''),
       manager: '',
       targetEndDate: '',
       revisedEndDate: '',
@@ -234,24 +244,26 @@ export default function ProjectList() {
     <div className="space-y-4">
       <div className="bg-white rounded-lg shadow-md p-4">
         <div className="flex flex-col md:flex-row gap-3 mb-4">
-          <div className="flex-1">
-            <label htmlFor="filterDepartment" className="block text-sm font-medium text-gray-700 mb-1">
-              부서 필터
-            </label>
-            <select
-              id="filterDepartment"
-              value={filterDepartment}
-              onChange={(e) => setFilterDepartment(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
-            >
-              <option value="">모든 부서</option>
-              {departments.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isOperator && (
+            <div className="flex-1">
+              <label htmlFor="filterDepartment" className="block text-sm font-medium text-gray-700 mb-1">
+                부서 필터
+              </label>
+              <select
+                id="filterDepartment"
+                value={filterDepartment}
+                onChange={(e) => setFilterDepartment(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
+              >
+                <option value="">모든 부서</option>
+                {departments.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex-1">
             <label htmlFor="filterStatus" className="block text-sm font-medium text-gray-700 mb-1">
               상태 필터
@@ -286,7 +298,7 @@ export default function ProjectList() {
           <div className="flex items-end gap-2">
             <button
               onClick={() => {
-                setFilterDepartment('');
+                if (isOperator) setFilterDepartment('');
                 setFilterStatus('');
                 setFilterProjectName('');
               }}
@@ -553,18 +565,27 @@ export default function ProjectList() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">부서 <span className="text-red-500">*</span></label>
-                  <select
-                    value={formData.department || ''}
-                    onChange={(e) => handleInputChange('department', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
-                  >
-                    <option value="">부서 선택</option>
-                    {departments.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
-                  </select>
+                  {isOperator ? (
+                    <select
+                      value={formData.department || ''}
+                      onChange={(e) => handleInputChange('department', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
+                    >
+                      <option value="">부서 선택</option>
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={formData.department || ''}
+                      readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 cursor-not-allowed"
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">담당자 <span className="text-red-500">*</span></label>
@@ -836,18 +857,27 @@ export default function ProjectList() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">부서 <span className="text-red-500">*</span></label>
-                  <select
-                    value={formData.department || ''}
-                    onChange={(e) => handleInputChange('department', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
-                  >
-                    <option value="">부서 선택</option>
-                    {departments.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
-                  </select>
+                  {isOperator ? (
+                    <select
+                      value={formData.department || ''}
+                      onChange={(e) => handleInputChange('department', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
+                    >
+                      <option value="">부서 선택</option>
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={formData.department || ''}
+                      readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 cursor-not-allowed"
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">담당자 <span className="text-red-500">*</span></label>

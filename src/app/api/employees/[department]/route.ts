@@ -1,17 +1,24 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import SupabaseService from '@/lib/supabase';
+import { getRequestUser, getCompanyScope } from '@/lib/auth-helpers';
 
 const dbService = new SupabaseService();
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ department: string }> }
 ) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { department } = await params;
     const decodedDepartment = decodeURIComponent(department);
-    const employees = await dbService.getEmployeesByDepartment(decodedDepartment);
-    return NextResponse.json(employees);
+    const companyId = getCompanyScope(user);
+    const employees = await dbService.getEmployeesByDepartment(decodedDepartment, companyId);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const safeEmployees = employees.map(({ passwordHash, ...rest }) => rest);
+    return NextResponse.json(safeEmployees);
   } catch (error) {
     console.error('Error fetching employees by department:', error);
     return NextResponse.json({ error: 'Failed to fetch employees' }, { status: 500 });

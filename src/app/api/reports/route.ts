@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import SupabaseService from '@/lib/supabase';
+import { getRequestUser, getCompanyScope, getDepartmentScope, requireRole } from '@/lib/auth-helpers';
 
 const dbService = new SupabaseService();
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const reports = await dbService.getDailyReports();
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const companyId = getCompanyScope(user);
+    const department = getDepartmentScope(user);
+    const reports = await dbService.getDailyReports(companyId, department);
     return NextResponse.json(reports);
   } catch (error) {
     console.error('Error fetching reports:', error);
@@ -15,61 +21,67 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const data = await request.json();
-    
+
     // Check if it's a bulk request (array of reports) or single report
     const isBulk = Array.isArray(data.reports || data);
     const isUpdate = data.isUpdate || false;
     const reports = data.reports || (isBulk ? data : [data]);
-    
+
+    // Inject companyId into each report
+    for (const report of reports) {
+      if (!report.companyId) {
+        report.companyId = user.companyId;
+      }
+    }
+
     // Validate each report
     for (const report of reports) {
       // Validate required fields
       if (!report.date || !report.employeeName) {
         return NextResponse.json({ error: 'Missing required fields: date and employeeName' }, { status: 400 });
       }
-      
+
       // Check if at least one content field is provided (unless it's annual leave)
-      const hasContent = report.workOverview?.trim() || 
-                        report.progressGoal?.trim() || 
-                        report.remarks?.trim() || 
+      const hasContent = report.workOverview?.trim() ||
+                        report.progressGoal?.trim() ||
+                        report.remarks?.trim() ||
                         report.managerEvaluation?.trim();
-      
+
       if (report.workOverview !== '연차' && !hasContent) {
         return NextResponse.json({ error: 'At least one field must be filled' }, { status: 400 });
       }
-      
+
       // Validate achievement rate
       if (report.achievementRate < 0) {
         return NextResponse.json({ error: 'Achievement rate must be 0 or greater' }, { status: 400 });
       }
-      
-      // Manager evaluation is now free text, so no specific validation needed
-      // Just ensure it's a string (can be empty)
+
       if (report.managerEvaluation !== undefined && typeof report.managerEvaluation !== 'string') {
         return NextResponse.json({ error: 'Manager evaluation must be a string' }, { status: 400 });
       }
     }
-    
+
     let success = false;
-    
+
     if (isUpdate && reports.length > 0) {
-      // 기존 데이터 수정: 특정 날짜와 직원들의 기존 데이터를 삭제하고 새로운 데이터 추가
       const date = reports[0].date;
       const employeeNames = reports.map((report: any) => report.employeeName);
       success = await dbService.replaceReportsByDateAndEmployees(date, employeeNames, reports);
     } else {
-      // 새로운 데이터 추가: 기존 로직 사용
       success = reports.length > 1
         ? await dbService.addDailyReports(reports)
         : await dbService.addDailyReport(reports[0]);
     }
-    
+
     if (success) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: reports.length > 1
-          ? `${reports.length} reports ${isUpdate ? 'updated' : 'added'} successfully` 
-          : `Report ${isUpdate ? 'updated' : 'added'} successfully` 
+          ? `${reports.length} reports ${isUpdate ? 'updated' : 'added'} successfully`
+          : `Report ${isUpdate ? 'updated' : 'added'} successfully`
       });
     } else {
       return NextResponse.json({ error: `Failed to ${isUpdate ? 'update' : 'add'} report(s)` }, { status: 500 });
@@ -82,6 +94,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { id, report } = await request.json();
 
     if (!id || !report) {
@@ -103,14 +118,23 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const user = await getRequestUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // Only operator and manager can delete reports
+    if (!requireRole(user, 'operator', 'manager')) {
+      return NextResponse.json({ error: '보고서 삭제 권한이 없습니다.' }, { status: 403 });
+    }
+
     const { date, employeeName, workOverview } = await request.json();
 
     if (!date || !employeeName) {
       return NextResponse.json({ error: 'Missing required fields: date and employeeName' }, { status: 400 });
     }
 
-    // Get all reports to find the exact match
-    const allReports = await dbService.getDailyReports();
+    // Get reports scoped to user's access level
+    const companyId = getCompanyScope(user);
+    const allReports = await dbService.getDailyReports(companyId);
     const reportToDelete = allReports.find((report: any) =>
       report.date === date &&
       report.employeeName === employeeName &&
@@ -121,13 +145,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
 
-    // Check if this employee has multiple reports on this date
     const employeeReportsOnDate = allReports.filter((report: any) =>
       report.date === date && report.employeeName === employeeName
     );
 
     if (employeeReportsOnDate.length === 1) {
-      // If this is the only report for this employee on this date, delete it
       const success = await dbService.deleteReportsByDateAndEmployees(date, [employeeName]);
 
       if (success) {
@@ -136,20 +158,16 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to delete report' }, { status: 500 });
       }
     } else {
-      // If there are multiple reports for this employee on this date,
-      // we'll recreate all reports except the one to delete
       const reportsToKeep = employeeReportsOnDate.filter((report: any) =>
         report.workOverview !== workOverview
       );
 
-      // First delete all reports for this employee on this date
       const deleteSuccess = await dbService.deleteReportsByDateAndEmployees(date, [employeeName]);
 
       if (!deleteSuccess) {
         return NextResponse.json({ error: 'Failed to delete reports' }, { status: 500 });
       }
 
-      // Then add back the reports we want to keep
       if (reportsToKeep.length > 0) {
         const addSuccess = await dbService.addDailyReports(reportsToKeep);
 
