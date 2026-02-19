@@ -43,7 +43,7 @@ export default function PersonalReportList() {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    fetchMasterData();
   }, []);
 
   // 관리자/사용자는 본인 부서로 자동 고정
@@ -56,7 +56,7 @@ export default function PersonalReportList() {
   // 부서 필터가 변경될 때 사원 필터 유효성 검사
   useEffect(() => {
     if (filterEmployee && filterDepartment && employees.length > 0) {
-      const isValidEmployee = employees.some(emp => 
+      const isValidEmployee = employees.some(emp =>
         emp.employeeName === filterEmployee && emp.department === filterDepartment
       );
       if (!isValidEmployee) {
@@ -65,19 +65,45 @@ export default function PersonalReportList() {
     }
   }, [filterDepartment, employees, filterEmployee]);
 
+  // 필터 조건 변경 시 서버에서 날짜 범위로 데이터 재조회
+  useEffect(() => {
+    fetchReports();
+  }, [filterType, filterMonth, filterStartDate, filterEndDate]);
 
-  const fetchData = async () => {
+  const getLastDayOfMonth = (yearMonth: string): string => {
+    const [year, month] = yearMonth.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    return `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
+  };
+
+  const fetchReports = async () => {
     try {
-      const [reportsResponse, employeesResponse, departmentsResponse] = await Promise.all([
-        fetch('/api/reports'),
+      const params = new URLSearchParams();
+
+      if (filterType === 'month' && filterMonth) {
+        params.set('startDate', `${filterMonth}-01`);
+        params.set('endDate', getLastDayOfMonth(filterMonth));
+      } else if (filterType === 'custom' && filterStartDate && filterEndDate) {
+        params.set('startDate', filterStartDate);
+        params.set('endDate', filterEndDate);
+      }
+
+      const response = await fetch(`/api/reports?${params.toString()}`);
+      if (response.ok) {
+        const reportsData = await response.json();
+        setReports(reportsData);
+      }
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+    }
+  };
+
+  const fetchMasterData = async () => {
+    try {
+      const [employeesResponse, departmentsResponse] = await Promise.all([
         fetch('/api/employees'),
         fetch('/api/departments')
       ]);
-
-      if (reportsResponse.ok) {
-        const reportsData = await reportsResponse.json();
-        setReports(reportsData);
-      }
 
       if (employeesResponse.ok) {
         const employeesData = await employeesResponse.json();
@@ -89,7 +115,7 @@ export default function PersonalReportList() {
         setDepartments(departmentsData);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching master data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -389,7 +415,7 @@ export default function PersonalReportList() {
 
         {filterType === 'custom' && (
           <div className="mb-4 text-sm text-gray-600">
-            ※ 최대 31일까지 선택 가능합니다.
+            ※ 최대 100일까지 선택 가능합니다.
           </div>
         )}
       </div>

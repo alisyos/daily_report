@@ -29,8 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const companyId = getCompanyScope(user);
-    const reports = await dbService.getDailyReports(companyId);
-    const dateReports = reports.filter(report => report.date === date && report.department === department);
+    const dateReports = await dbService.getDailyReports(companyId, department, date, date);
 
     if (dateReports.length === 0) {
       return NextResponse.json({ error: '해당 부서에 작성된 보고서가 없습니다.' }, { status: 404 });

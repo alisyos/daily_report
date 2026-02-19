@@ -9,9 +9,13 @@ export async function GET(request: NextRequest) {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get('startDate') || undefined;
+    const endDate = searchParams.get('endDate') || undefined;
+
     const companyId = getCompanyScope(user);
     const department = getDepartmentScope(user);
-    const reports = await dbService.getDailyReports(companyId, department);
+    const reports = await dbService.getDailyReports(companyId, department, startDate, endDate);
     return NextResponse.json(reports);
   } catch (error) {
     console.error('Error fetching reports:', error);
@@ -132,7 +136,7 @@ export async function DELETE(request: NextRequest) {
 
     // Get reports scoped to user's access level
     const companyId = getCompanyScope(user);
-    const allReports = await dbService.getDailyReports(companyId);
+    const allReports = await dbService.getDailyReports(companyId, undefined, date, date);
     const reportToDelete = allReports.find((report: any) =>
       report.date === date &&
       report.employeeName === employeeName &&

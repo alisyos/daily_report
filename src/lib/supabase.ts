@@ -104,6 +104,33 @@ export interface Department {
   updatedAt?: string;
 }
 
+export interface Mission {
+  id?: string;
+  missionName: string;
+  description: string;
+  assignee: string;
+  department: string;
+  companyId?: string;
+  startDate: string;
+  endDate: string;
+  status: '대기' | '진행중' | '완료';
+  progressRate: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface MissionKpi {
+  id?: string;
+  missionId: string;
+  kpiName: string;
+  targetValue: number;
+  currentValue: number;
+  unit: string;
+  achievementRate?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Database column name mapping (camelCase to snake_case)
 const toSnakeCase = (str: string): string => {
   return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
@@ -154,7 +181,7 @@ class SupabaseService {
   }
 
   // Daily Reports Methods
-  async getDailyReports(companyId?: string, department?: string): Promise<DailyReport[]> {
+  async getDailyReports(companyId?: string, department?: string, startDate?: string, endDate?: string): Promise<DailyReport[]> {
     try {
       let query = this.supabase
         .from('daily_reports')
@@ -162,8 +189,10 @@ class SupabaseService {
 
       if (companyId) query = query.eq('company_id', companyId);
       if (department) query = query.eq('department', department);
+      if (startDate) query = query.gte('date', startDate);
+      if (endDate) query = query.lte('date', endDate);
 
-      const { data, error } = await query.order('date', { ascending: false });
+      const { data, error } = await query.order('date', { ascending: false }).range(0, 9999);
 
       if (error) throw error;
 
@@ -962,6 +991,144 @@ class SupabaseService {
     } catch (error) {
       console.error('Error fetching department by id:', error);
       return null;
+    }
+  }
+  // Mission Methods
+  async getMissions(companyId?: string, department?: string, assignee?: string): Promise<Mission[]> {
+    try {
+      let query = this.supabase
+        .from('missions')
+        .select('*');
+
+      if (companyId) query = query.eq('company_id', companyId);
+      if (department) query = query.eq('department', department);
+      if (assignee) query = query.eq('assignee', assignee);
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return convertKeysToCamelCase(data || []);
+    } catch (error) {
+      console.error('Error fetching missions:', error);
+      return [];
+    }
+  }
+
+  async addMission(mission: Omit<Mission, 'id'>): Promise<Mission | null> {
+    try {
+      const dbMission = convertKeysToSnakeCase(mission);
+      const { data, error } = await this.supabase
+        .from('missions')
+        .insert([dbMission])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return convertKeysToCamelCase(data);
+    } catch (error) {
+      console.error('Error adding mission:', error);
+      return null;
+    }
+  }
+
+  async updateMission(id: string, mission: Partial<Mission>): Promise<boolean> {
+    try {
+      const dbMission = convertKeysToSnakeCase(mission);
+      const { error } = await this.supabase
+        .from('missions')
+        .update(dbMission)
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating mission:', error);
+      return false;
+    }
+  }
+
+  async deleteMission(id: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('missions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting mission:', error);
+      return false;
+    }
+  }
+
+  // Mission KPI Methods
+  async getKpisByMissionIds(missionIds: string[]): Promise<MissionKpi[]> {
+    try {
+      if (missionIds.length === 0) return [];
+
+      const { data, error } = await this.supabase
+        .from('mission_kpis')
+        .select('*')
+        .in('mission_id', missionIds)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      return convertKeysToCamelCase(data || []);
+    } catch (error) {
+      console.error('Error fetching KPIs:', error);
+      return [];
+    }
+  }
+
+  async addMissionKpi(kpi: Omit<MissionKpi, 'id' | 'achievementRate'>): Promise<MissionKpi | null> {
+    try {
+      const dbKpi = convertKeysToSnakeCase(kpi);
+      const { data, error } = await this.supabase
+        .from('mission_kpis')
+        .insert([dbKpi])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return convertKeysToCamelCase(data);
+    } catch (error) {
+      console.error('Error adding KPI:', error);
+      return null;
+    }
+  }
+
+  async updateMissionKpi(id: string, kpi: Partial<MissionKpi>): Promise<boolean> {
+    try {
+      const { achievementRate: _, ...cleanKpi } = kpi as any;
+      const dbKpi = convertKeysToSnakeCase(cleanKpi);
+      const { error } = await this.supabase
+        .from('mission_kpis')
+        .update(dbKpi)
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating KPI:', error);
+      return false;
+    }
+  }
+
+  async deleteMissionKpi(id: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('mission_kpis')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting KPI:', error);
+      return false;
     }
   }
 }
