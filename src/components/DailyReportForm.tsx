@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Employee {
+  id?: string;
   employeeCode: string;
   employeeName: string;
   position: string;
@@ -22,6 +23,7 @@ interface WorkItem {
 interface DailyReportFormData {
   date: string;
   employeeName: string;
+  employeeId?: string;
   isOnLeave: boolean;
   workItems: WorkItem[];
 }
@@ -99,43 +101,52 @@ export default function DailyReportForm() {
     setIsLoadingReports(true);
     setHasExistingData(false);
     try {
-      const response = await fetch('/api/reports');
+      const response = await fetch(`/api/reports?startDate=${reportDate}&endDate=${reportDate}`);
       if (response.ok) {
         const allReports = await response.json();
-        
-        // Filter reports for the selected date and selected employees
-        const selectedEmployeeObjects = employees.filter(emp => 
-          selectedEmployees.includes(emp.employeeName)
+
+        // Filter employees by selected IDs
+        const selectedEmployeeObjects = employees.filter(emp =>
+          selectedEmployees.includes(emp.id!)
         );
-        
-        const existingReports = allReports.filter((report: any) => 
-          report.date === reportDate && 
-          selectedEmployees.includes(report.employeeName)
+        const selectedEmployeeIds = selectedEmployeeObjects.map(emp => emp.id);
+
+        // Filter reports by employeeId (with name fallback for legacy data)
+        const existingReports = allReports.filter((report: any) =>
+          report.date === reportDate &&
+          (report.employeeId
+            ? selectedEmployeeIds.includes(report.employeeId)
+            : selectedEmployees.some(id => {
+                const emp = employees.find(e => e.id === id);
+                return emp && emp.employeeName === report.employeeName;
+              }))
         );
 
         if (existingReports.length > 0) {
           setHasExistingData(true);
-          // Group existing reports by employee
+          // Group existing reports by employeeId (fallback to employeeName)
           const reportsByEmployee = existingReports.reduce((acc: any, report: any) => {
-            if (!acc[report.employeeName]) {
-              acc[report.employeeName] = [];
+            const key = report.employeeId || report.employeeName;
+            if (!acc[key]) {
+              acc[key] = [];
             }
-            acc[report.employeeName].push(report);
+            acc[key].push(report);
             return acc;
           }, {});
 
           // Create reports array with existing data
           const newReports = selectedEmployeeObjects.map(employee => {
-            const employeeReports = reportsByEmployee[employee.employeeName] || [];
-            
+            const employeeReports = reportsByEmployee[employee.id!] || reportsByEmployee[employee.employeeName] || [];
+
             if (employeeReports.length > 0) {
               // Check if it's annual leave
               const isOnLeave = employeeReports.some((report: any) => report.workOverview === '연차');
-              
+
               if (isOnLeave) {
                 return {
                   date: reportDate,
                   employeeName: employee.employeeName,
+                  employeeId: employee.id,
                   isOnLeave: true,
                   workItems: [{
                     workOverview: '',
@@ -150,6 +161,7 @@ export default function DailyReportForm() {
                 return {
                   date: reportDate,
                   employeeName: employee.employeeName,
+                  employeeId: employee.id,
                   isOnLeave: false,
                   workItems: employeeReports.map((report: any) => ({
                     workOverview: report.workOverview,
@@ -165,6 +177,7 @@ export default function DailyReportForm() {
               return {
                 date: reportDate,
                 employeeName: employee.employeeName,
+                employeeId: employee.id,
                 isOnLeave: false,
                 workItems: [{
                   workOverview: '',
@@ -183,6 +196,7 @@ export default function DailyReportForm() {
           setReports(selectedEmployeeObjects.map(employee => ({
             date: reportDate,
             employeeName: employee.employeeName,
+            employeeId: employee.id,
             isOnLeave: false,
             workItems: [{
               workOverview: '',
@@ -197,12 +211,13 @@ export default function DailyReportForm() {
     } catch (error) {
       console.error('Error fetching existing reports:', error);
       // Fallback to empty forms
-      const selectedEmployeeObjects = employees.filter(emp => 
-        selectedEmployees.includes(emp.employeeName)
+      const selectedEmployeeObjects = employees.filter(emp =>
+        selectedEmployees.includes(emp.id!)
       );
       setReports(selectedEmployeeObjects.map(employee => ({
         date: reportDate,
         employeeName: employee.employeeName,
+        employeeId: employee.id,
         isOnLeave: false,
         workItems: [{
           workOverview: '',
@@ -292,15 +307,19 @@ export default function DailyReportForm() {
     try {
       // Convert reports to flat structure for API
       const flatReports = reports.flatMap(report => {
-        // Find employee's department
-        const employee = employees.find(emp => emp.employeeName === report.employeeName);
+        // Find employee's department and id
+        const employee = report.employeeId
+          ? employees.find(emp => emp.id === report.employeeId)
+          : employees.find(emp => emp.employeeName === report.employeeName);
         const department = employee?.department || selectedDepartment;
+        const employeeId = report.employeeId || employee?.id;
 
         if (report.isOnLeave) {
           // 연차인 경우 workOverview를 '연차'로 설정
           return [{
             date: report.date,
             employeeName: report.employeeName,
+            employeeId,
             department: department,
             workOverview: '연차',
             progressGoal: '-',
@@ -320,6 +339,7 @@ export default function DailyReportForm() {
             .map(workItem => ({
               date: report.date,
               employeeName: report.employeeName,
+              employeeId,
               department: department,
               workOverview: workItem.workOverview,
               progressGoal: workItem.progressGoal,
@@ -367,12 +387,12 @@ export default function DailyReportForm() {
     }
   };
 
-  const handleEmployeeSelection = (employeeName: string, isSelected: boolean) => {
+  const handleEmployeeSelection = (employeeId: string, isSelected: boolean) => {
     setSelectedEmployees(prev => {
       if (isSelected) {
-        return [...prev, employeeName];
+        return [...prev, employeeId];
       } else {
-        return prev.filter(name => name !== employeeName);
+        return prev.filter(id => id !== employeeId);
       }
     });
   };
@@ -381,7 +401,7 @@ export default function DailyReportForm() {
     if (selectedEmployees.length === employees.length) {
       setSelectedEmployees([]);
     } else {
-      setSelectedEmployees(employees.map(emp => emp.employeeName));
+      setSelectedEmployees(employees.map(emp => emp.id!));
     }
   };
 
@@ -470,8 +490,8 @@ export default function DailyReportForm() {
               <label key={employee.employeeCode} className="flex items-center space-x-2 text-sm">
                 <input
                   type="checkbox"
-                  checked={selectedEmployees.includes(employee.employeeName)}
-                  onChange={(e) => handleEmployeeSelection(employee.employeeName, e.target.checked)}
+                  checked={selectedEmployees.includes(employee.id!)}
+                  onChange={(e) => handleEmployeeSelection(employee.id!, e.target.checked)}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
                 />
                 <span className="text-gray-700">
@@ -516,7 +536,9 @@ export default function DailyReportForm() {
             
             <div className="space-y-4">
               {reports.map((report, employeeIndex) => {
-                const employee = employees.find(emp => emp.employeeName === report.employeeName);
+                const employee = report.employeeId
+                  ? employees.find(emp => emp.id === report.employeeId)
+                  : employees.find(emp => emp.employeeName === report.employeeName);
                 if (!employee) return null;
                 
                 return (

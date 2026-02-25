@@ -7,6 +7,7 @@ import SummaryModalAI from './SummaryModalAI';
 interface DailyReport {
   date: string;
   employeeName: string;
+  employeeId?: string;
   department: string;
   workOverview: string;
   progressGoal: string;
@@ -16,6 +17,7 @@ interface DailyReport {
 }
 
 interface Employee {
+  id?: string;
   employeeCode: string;
   employeeName: string;
   position: string;
@@ -182,16 +184,18 @@ export default function PersonalReportList() {
     return matchesDate && matchesDepartment && matchesEmployee;
   });
 
+  // Group by employeeId (precise) with fallback to employeeName
   const groupedByEmployee = filteredReports.reduce((acc, report) => {
-    if (!acc[report.employeeName]) {
-      acc[report.employeeName] = {};
+    const groupKey = report.employeeId || report.employeeName;
+    if (!acc[groupKey]) {
+      acc[groupKey] = {};
     }
-    if (!acc[report.employeeName][report.date]) {
-      acc[report.employeeName][report.date] = [];
+    if (!acc[groupKey][report.date]) {
+      acc[groupKey][report.date] = [];
     }
-    acc[report.employeeName][report.date].push(report);
+    acc[groupKey][report.date].push(report);
     return acc;
-  }, {} as { [employeeName: string]: { [date: string]: DailyReport[] } });
+  }, {} as { [key: string]: { [date: string]: DailyReport[] } });
 
 
   const calculateMonthlyStats = (employeeReports: { [date: string]: DailyReport[] }) => {
@@ -427,30 +431,33 @@ export default function PersonalReportList() {
           </div>
         ) : (
           Object.entries(groupedByEmployee)
-            .sort(([nameA], [nameB]) => {
-              // 항상 사원 코드 순서로 정렬
-              const empA = employees.find(emp => emp.employeeName === nameA);
-              const empB = employees.find(emp => emp.employeeName === nameB);
+            .sort(([keyA], [keyB]) => {
+              // Resolve employee from groupKey (could be id or name)
+              const empA = employees.find(emp => emp.id === keyA || emp.employeeName === keyA);
+              const empB = employees.find(emp => emp.id === keyB || emp.employeeName === keyB);
               const codeA = empA?.employeeCode || '';
               const codeB = empB?.employeeCode || '';
-              
+
               // 사원 코드를 숫자로 비교 (예: EMP001, EMP002 등)
               const numA = parseInt(codeA.replace(/[^0-9]/g, '')) || 0;
               const numB = parseInt(codeB.replace(/[^0-9]/g, '')) || 0;
-              
+
               if (numA !== numB) {
                 return numA - numB;
               }
-              
+
               // 숫자가 같으면 전체 문자열로 비교
               return codeA.localeCompare(codeB);
             })
-            .map(([employeeName, employeeReports]) => {
-              const employee = employees.find(emp => emp.employeeName === employeeName);
+            .map(([groupKey, employeeReports]) => {
+              // Derive display name from reports or employee master
+              const firstReport = Object.values(employeeReports)[0]?.[0];
+              const employeeName = firstReport?.employeeName || groupKey;
+              const employee = employees.find(emp => emp.id === groupKey || emp.employeeName === employeeName);
               const stats = filterType === 'month' ? calculateMonthlyStats(employeeReports) : null;
             
             return (
-              <div key={employeeName} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div key={groupKey} className="bg-white rounded-lg shadow-md overflow-hidden">
                 <div className="bg-blue-50 p-4 border-b border-blue-200">
                   <div className="flex justify-between items-center">
                     <div>

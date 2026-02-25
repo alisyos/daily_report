@@ -4,8 +4,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface DailyReport {
+  id?: string;
   date: string;
   employeeName: string;
+  employeeId?: string;
   department: string;
   workOverview: string;
   progressGoal: string;
@@ -16,6 +18,7 @@ interface DailyReport {
 }
 
 interface Employee {
+  id?: string;
   employeeCode: string;
   employeeName: string;
   position: string;
@@ -291,11 +294,7 @@ export default function ReportList() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          rowIndex: reports.findIndex(r =>
-            r.date === editingReport?.date &&
-            r.employeeName === editingReport?.employeeName &&
-            r.workOverview === editingReport?.workOverview
-          ),
+          id: editingReport?.id,
           report: editFormData,
         }),
       });
@@ -323,6 +322,7 @@ export default function ReportList() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          id: editingReport.id,
           date: editingReport.date,
           employeeName: editingReport.employeeName,
           workOverview: editingReport.workOverview,

@@ -5,6 +5,7 @@ export interface DailyReport {
   id?: string;
   date: string;
   employeeName: string;
+  employeeId?: string;
   department?: string;
   workOverview: string;
   progressGoal: string;
@@ -75,6 +76,7 @@ export interface Project {
 export interface PersonalReport {
   id?: string;
   employeeName: string;
+  employeeId?: string;
   period: string;
   totalReports: number;
   averageAchievementRate: number;
@@ -278,6 +280,51 @@ class SupabaseService {
       return await this.addDailyReports(newReports);
     } catch (error) {
       console.error('Error replacing reports:', error);
+      return false;
+    }
+  }
+
+  async deleteReportById(id: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('daily_reports')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting report by id:', error);
+      return false;
+    }
+  }
+
+  async deleteReportsByDateAndEmployeeIds(date: string, employeeIds: string[]): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('daily_reports')
+        .delete()
+        .eq('date', date)
+        .in('employee_id', employeeIds);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting reports by employee ids:', error);
+      return false;
+    }
+  }
+
+  async replaceReportsByDateAndEmployeeIds(
+    date: string,
+    employeeIds: string[],
+    newReports: DailyReport[]
+  ): Promise<boolean> {
+    try {
+      await this.deleteReportsByDateAndEmployeeIds(date, employeeIds);
+      return await this.addDailyReports(newReports);
+    } catch (error) {
+      console.error('Error replacing reports by employee ids:', error);
       return false;
     }
   }

@@ -4,6 +4,7 @@ import { getRequestUser } from '@/lib/auth-helpers';
 interface DailyReport {
   date: string;
   employeeName: string;
+  employeeId?: string;
   department: string;
   workOverview: string;
   progressGoal: string;
@@ -285,9 +286,10 @@ function generateStructuredSummary(
     task.dates.push(report.date);
     task.achievements.push(report.achievementRate);
     
-    // 직원별 통계
-    if (!employeeStats[report.employeeName]) {
-      employeeStats[report.employeeName] = {
+    // 직원별 통계 (employeeId 우선, fallback to employeeName)
+    const empKey = report.employeeId || report.employeeName;
+    if (!employeeStats[empKey]) {
+      employeeStats[empKey] = {
         name: report.employeeName,
         department: report.department,
         projects: new Set(),
@@ -295,9 +297,9 @@ function generateStructuredSummary(
         totalAchievement: 0
       };
     }
-    employeeStats[report.employeeName].projects.add(projectKey);
-    employeeStats[report.employeeName].totalReports++;
-    employeeStats[report.employeeName].totalAchievement += report.achievementRate;
+    employeeStats[empKey].projects.add(projectKey);
+    employeeStats[empKey].totalReports++;
+    employeeStats[empKey].totalAchievement += report.achievementRate;
   });
   
   // 프로젝트 데이터 변환

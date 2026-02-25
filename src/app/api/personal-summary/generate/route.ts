@@ -4,6 +4,7 @@ import { getRequestUser } from '@/lib/auth-helpers';
 interface DailyReport {
   date: string;
   employeeName: string;
+  employeeId?: string;
   department: string;
   workOverview: string;
   progressGoal: string;
@@ -66,17 +67,19 @@ export async function POST(request: NextRequest) {
     }, {} as any);
 
     const employeeStats = filteredReports.reduce((acc, report) => {
-      if (!acc[report.employeeName]) {
-        acc[report.employeeName] = {
+      const key = report.employeeId || report.employeeName;
+      if (!acc[key]) {
+        acc[key] = {
+          employeeName: report.employeeName,
           department: report.department,
           count: 0,
           totalAchievement: 0,
           reports: []
         };
       }
-      acc[report.employeeName].count++;
-      acc[report.employeeName].totalAchievement += report.achievementRate;
-      acc[report.employeeName].reports.push(report);
+      acc[key].count++;
+      acc[key].totalAchievement += report.achievementRate;
+      acc[key].reports.push(report);
       return acc;
     }, {} as any);
 
@@ -98,8 +101,8 @@ export async function POST(request: NextRequest) {
         employeeCount: stats.employees.size,
         averageAchievement: Math.round(stats.totalAchievement / stats.count)
       })),
-      employeeStats: Object.entries(employeeStats).map(([name, stats]: [string, any]) => ({
-        employeeName: name,
+      employeeStats: Object.entries(employeeStats).map(([, stats]: [string, any]) => ({
+        employeeName: stats.employeeName,
         department: stats.department,
         reportCount: stats.count,
         averageAchievement: Math.round(stats.totalAchievement / stats.count),

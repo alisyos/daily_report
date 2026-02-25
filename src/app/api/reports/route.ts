@@ -71,8 +71,17 @@ export async function POST(request: NextRequest) {
 
     if (isUpdate && reports.length > 0) {
       const date = reports[0].date;
-      const employeeNames = reports.map((report: any) => report.employeeName);
-      success = await dbService.replaceReportsByDateAndEmployees(date, employeeNames, reports);
+      // Prefer employee_id based replace to avoid same-name collisions
+      const employeeIds = reports
+        .map((report: any) => report.employeeId)
+        .filter((id: any) => id);
+      if (employeeIds.length > 0 && employeeIds.length === reports.length) {
+        success = await dbService.replaceReportsByDateAndEmployeeIds(date, employeeIds, reports);
+      } else {
+        // Fallback to name-based replace
+        const employeeNames = reports.map((report: any) => report.employeeName);
+        success = await dbService.replaceReportsByDateAndEmployees(date, employeeNames, reports);
+      }
     } else {
       success = reports.length > 1
         ? await dbService.addDailyReports(reports)
@@ -128,10 +137,21 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '보고서 삭제 권한이 없습니다.' }, { status: 403 });
     }
 
-    const { date, employeeName, workOverview } = await request.json();
+    const { id: reportId, date, employeeName, workOverview } = await request.json();
 
+    // Prefer id-based deletion (precise, no same-name collision)
+    if (reportId) {
+      const success = await dbService.deleteReportById(reportId);
+      if (success) {
+        return NextResponse.json({ message: 'Report deleted successfully' });
+      } else {
+        return NextResponse.json({ error: 'Failed to delete report' }, { status: 500 });
+      }
+    }
+
+    // Fallback: name-based deletion for legacy clients
     if (!date || !employeeName) {
-      return NextResponse.json({ error: 'Missing required fields: date and employeeName' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing required fields: id or (date and employeeName)' }, { status: 400 });
     }
 
     // Get reports scoped to user's access level
@@ -147,6 +167,17 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
 
+    // If report has an id, use direct id-based deletion
+    if (reportToDelete.id) {
+      const success = await dbService.deleteReportById(reportToDelete.id);
+      if (success) {
+        return NextResponse.json({ message: 'Report deleted successfully' });
+      } else {
+        return NextResponse.json({ error: 'Failed to delete report' }, { status: 500 });
+      }
+    }
+
+    // Legacy fallback: delete-and-restore approach
     const employeeReportsOnDate = allReports.filter((report: any) =>
       report.date === date && report.employeeName === employeeName
     );
