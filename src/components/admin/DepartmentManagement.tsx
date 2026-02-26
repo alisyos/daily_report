@@ -68,18 +68,20 @@ export default function DepartmentManagement() {
 
   const fetchData = async () => {
     try {
-      const [deptRes, compRes] = await Promise.all([
-        fetch('/api/admin/departments'),
-        fetch('/api/admin/companies'),
-      ]);
+      const promises: Promise<Response>[] = [fetch('/api/admin/departments')];
+      if (user?.role === 'operator') {
+        promises.push(fetch('/api/admin/companies'));
+      }
 
-      if (deptRes.ok) {
-        const data = await deptRes.json();
+      const responses = await Promise.all(promises);
+
+      if (responses[0].ok) {
+        const data = await responses[0].json();
         setDepartments(data);
       }
 
-      if (compRes.ok) {
-        const companiesData = await compRes.json();
+      if (responses[1] && responses[1].ok) {
+        const companiesData = await responses[1].json();
         setCompanies(companiesData);
       }
     } catch (error) {
@@ -179,11 +181,14 @@ export default function DepartmentManagement() {
     return <div className="flex justify-center p-8">로딩 중...</div>;
   }
 
-  // Only operator can access this page
-  if (user?.role !== 'operator') {
+  const isOperator = user?.role === 'operator';
+  const isCompanyManager = user?.role === 'company_manager';
+
+  // Only operator and company_manager can access this page
+  if (!isOperator && !isCompanyManager) {
     return (
       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-        부서 관리는 운영자만 사용할 수 있습니다.
+        부서 관리는 운영자 또는 회사 관리자만 사용할 수 있습니다.
       </div>
     );
   }
@@ -196,7 +201,7 @@ export default function DepartmentManagement() {
           onClick={() => {
             setIsAdding(true);
             setEditingId(null);
-            setFormData({ departmentName: '', companyId: '' });
+            setFormData({ departmentName: '', companyId: isCompanyManager ? (user?.companyId || '') : '' });
           }}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
         >
@@ -216,6 +221,7 @@ export default function DepartmentManagement() {
       {!isAdding && !editingId && (
         <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {isOperator && (
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">업체</label>
               <select
@@ -229,6 +235,7 @@ export default function DepartmentManagement() {
                 ))}
               </select>
             </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">검색 (부서명)</label>
               <input
@@ -261,6 +268,7 @@ export default function DepartmentManagement() {
         <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <h3 className="font-medium mb-3 dark:text-gray-100">새 부서 추가</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {isOperator ? (
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                 업체 <span className="text-red-500">*</span>
@@ -277,6 +285,19 @@ export default function DepartmentManagement() {
                 ))}
               </select>
             </div>
+            ) : (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                업체 <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">(자사 고정)</span>
+              </label>
+              <input
+                type="text"
+                value={user?.companyName || ''}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 cursor-not-allowed text-gray-900 dark:text-gray-100"
+                readOnly
+              />
+            </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                 부서명 <span className="text-red-500">*</span>

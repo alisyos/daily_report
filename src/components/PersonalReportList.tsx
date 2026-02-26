@@ -30,6 +30,8 @@ type FilterType = 'month' | 'custom';
 export default function PersonalReportList() {
   const { user } = useAuth();
   const isOperator = user?.role === 'operator';
+  const isCompanyManager = user?.role === 'company_manager';
+  const canSelectDepartment = isOperator || isCompanyManager;
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
@@ -48,12 +50,12 @@ export default function PersonalReportList() {
     fetchMasterData();
   }, []);
 
-  // 관리자/사용자는 본인 부서로 자동 고정
+  // 부서 관리자/사용자는 본인 부서로 자동 고정
   useEffect(() => {
-    if (user && !isOperator && user.department) {
+    if (user && !canSelectDepartment && user.department) {
       setFilterDepartment(user.department);
     }
-  }, [user, isOperator]);
+  }, [user, canSelectDepartment]);
 
   // 부서 필터가 변경될 때 사원 필터 유효성 검사
   useEffect(() => {
@@ -321,7 +323,7 @@ export default function PersonalReportList() {
             </div>
           )}
           
-          {isOperator && (
+          {canSelectDepartment && (
             <div className="flex-1">
               <label htmlFor="filterDepartment" className="block text-sm font-medium text-gray-700 mb-1">
                 부서 필터
@@ -385,7 +387,7 @@ export default function PersonalReportList() {
                 setFilterMonth(new Date().toISOString().slice(0, 7));
                 setFilterStartDate('');
                 setFilterEndDate('');
-                if (isOperator) setFilterDepartment('');
+                if (canSelectDepartment) setFilterDepartment('');
                 setFilterEmployee('');
                 setFilterType('month');
               }}

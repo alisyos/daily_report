@@ -12,7 +12,7 @@ interface Employee {
   companyId?: string;
   companyName?: string;
   email?: string;
-  role?: 'operator' | 'manager' | 'user';
+  role?: 'operator' | 'company_manager' | 'manager' | 'user';
 }
 
 interface Company {
@@ -119,7 +119,7 @@ export default function EmployeeManagement() {
         fetch('/api/admin/employees'),
         fetch('/api/admin/departments'),
       ];
-      if (user?.role === 'operator') {
+      if (user?.role === 'operator' || user?.role === 'company_manager') {
         promises.push(fetch('/api/admin/companies'));
       }
 
@@ -157,7 +157,7 @@ export default function EmployeeManagement() {
       employeeName: '',
       position: '',
       department: user?.role === 'manager' ? user.department : '',
-      companyId: user?.role === 'manager' ? user.companyId : '',
+      companyId: (user?.role === 'manager' || user?.role === 'company_manager') ? user.companyId : '',
       email: '',
       role: 'user',
       password: '',
@@ -293,7 +293,8 @@ export default function EmployeeManagement() {
   const roleLabel = (role?: string) => {
     switch (role) {
       case 'operator': return '운영자';
-      case 'manager': return '관리자';
+      case 'company_manager': return '회사 관리자';
+      case 'manager': return '부서 관리자';
       case 'user': return '사용자';
       default: return '사용자';
     }
@@ -347,7 +348,7 @@ export default function EmployeeManagement() {
               </div>
             )}
             {/* Hide department filter for managers (they can only see their own department) */}
-            {user?.role === 'operator' && (
+            {(user?.role === 'operator' || user?.role === 'company_manager') && (
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">부서</label>
               <select
@@ -371,7 +372,8 @@ export default function EmployeeManagement() {
               >
                 <option value="">전체 역할</option>
                 <option value="operator">운영자</option>
-                <option value="manager">관리자</option>
+                <option value="company_manager">회사 관리자</option>
+                <option value="manager">부서 관리자</option>
                 <option value="user">사용자</option>
               </select>
             </div>
@@ -410,16 +412,35 @@ export default function EmployeeManagement() {
           </h3>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  역할
+                </label>
+                <select
+                  value={formData.role || 'user'}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as Employee['role'] })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="user">사용자</option>
+                  <option value="manager">부서 관리자</option>
+                  {(user?.role === 'operator' || user?.role === 'company_manager') && (
+                    <option value="company_manager">회사 관리자</option>
+                  )}
+                  {user?.role === 'operator' && (
+                    <option value="operator">운영자</option>
+                  )}
+                </select>
+              </div>
               {user?.role === 'operator' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    업체 <span className="text-red-500">*</span>
+                    업체 {formData.role !== 'operator' && <span className="text-red-500">*</span>}
                   </label>
                   <select
                     value={formData.companyId || ''}
                     onChange={(e) => setFormData({ ...formData, companyId: e.target.value, department: '' })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    required
+                    required={formData.role !== 'operator'}
                   >
                     <option value="">업체 선택</option>
                     {companies.map((company) => (
@@ -430,9 +451,22 @@ export default function EmployeeManagement() {
                   </select>
                 </div>
               )}
+              {user?.role === 'company_manager' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    업체 <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">(자사 고정)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={user.companyName}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 cursor-not-allowed text-gray-900 dark:text-gray-100"
+                    readOnly
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  부서 <span className="text-red-500">*</span>
+                  부서 {(formData.role === 'manager' || formData.role === 'user') && <span className="text-red-500">*</span>}
                   {user?.role === 'manager' && (
                     <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">(본인 부서로 고정)</span>
                   )}
@@ -442,7 +476,7 @@ export default function EmployeeManagement() {
                     type="text"
                     value={formData.department}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 cursor-not-allowed text-gray-900 dark:text-gray-100"
-                    required
+                    required={formData.role === 'manager' || formData.role === 'user'}
                     readOnly
                   />
                 ) : (
@@ -450,7 +484,7 @@ export default function EmployeeManagement() {
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    required
+                    required={formData.role === 'manager' || formData.role === 'user'}
                     disabled={!formData.companyId}
                   >
                     <option value="">
@@ -511,22 +545,6 @@ export default function EmployeeManagement() {
                   placeholder="email@example.com"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  역할
-                </label>
-                <select
-                  value={formData.role || 'user'}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as Employee['role'] })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                >
-                  <option value="user">사용자</option>
-                  <option value="manager">관리자</option>
-                  {user?.role === 'operator' && (
-                    <option value="operator">운영자</option>
-                  )}
-                </select>
               </div>
               {isAdding && (
                 <div>
@@ -628,6 +646,7 @@ export default function EmployeeManagement() {
                   <td className="px-4 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       employee.role === 'operator' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
+                      employee.role === 'company_manager' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400' :
                       employee.role === 'manager' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
                       'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
                     }`}>

@@ -22,7 +22,7 @@ export function canAccessCompany(user: AuthUser, companyId: string): boolean {
 export function canAccessDepartment(user: AuthUser, companyId: string, department: string): boolean {
   if (user.role === 'operator') return true;
   if (user.companyId !== companyId) return false;
-  if (user.role === 'manager') return true;
+  if (user.role === 'company_manager' || user.role === 'manager') return true;
   // user role: only their own department
   return user.department === department;
 }
@@ -43,6 +43,6 @@ export function getCompanyScope(user: AuthUser): string | undefined {
  * - user: returns their own department
  */
 export function getDepartmentScope(user: AuthUser): string | undefined {
-  if (user.role === 'operator' || user.role === 'manager') return undefined;
+  if (user.role === 'operator' || user.role === 'company_manager' || user.role === 'manager') return undefined;
   return user.department;
 }

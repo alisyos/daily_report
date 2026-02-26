@@ -19,6 +19,8 @@ interface Project {
 export default function ProjectList() {
   const { user } = useAuth();
   const isOperator = user?.role === 'operator';
+  const isCompanyManager = user?.role === 'company_manager';
+  const canSelectDepartment = isOperator || isCompanyManager;
   const [projects, setProjects] = useState<Project[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [filterDepartment, setFilterDepartment] = useState('');
@@ -53,12 +55,12 @@ export default function ProjectList() {
     fetchData();
   }, []);
 
-  // 관리자/사용자는 본인 부서로 자동 고정
+  // 부서 관리자/사용자는 본인 부서로 자동 고정
   useEffect(() => {
-    if (user && !isOperator && user.department) {
+    if (user && !canSelectDepartment && user.department) {
       setFilterDepartment(user.department);
     }
-  }, [user, isOperator]);
+  }, [user, canSelectDepartment]);
 
   const fetchData = async () => {
     try {
@@ -105,7 +107,7 @@ export default function ProjectList() {
   const handleAddProject = () => {
     setFormData({
       projectName: '',
-      department: !isOperator && user?.department ? user.department : (departments[0] || ''),
+      department: !canSelectDepartment && user?.department ? user.department : (departments[0] || ''),
       manager: '',
       targetEndDate: '',
       revisedEndDate: '',
@@ -244,7 +246,7 @@ export default function ProjectList() {
     <div className="space-y-4">
       <div className="bg-white rounded-lg shadow-md p-4">
         <div className="flex flex-col md:flex-row gap-3 mb-4">
-          {isOperator && (
+          {canSelectDepartment && (
             <div className="flex-1">
               <label htmlFor="filterDepartment" className="block text-sm font-medium text-gray-700 mb-1">
                 부서 필터
@@ -298,7 +300,7 @@ export default function ProjectList() {
           <div className="flex items-end gap-2">
             <button
               onClick={() => {
-                if (isOperator) setFilterDepartment('');
+                if (canSelectDepartment) setFilterDepartment('');
                 setFilterStatus('');
                 setFilterProjectName('');
               }}
@@ -565,7 +567,7 @@ export default function ProjectList() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">부서 <span className="text-red-500">*</span></label>
-                  {isOperator ? (
+                  {canSelectDepartment ? (
                     <select
                       value={formData.department || ''}
                       onChange={(e) => handleInputChange('department', e.target.value)}
@@ -857,7 +859,7 @@ export default function ProjectList() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">부서 <span className="text-red-500">*</span></label>
-                  {isOperator ? (
+                  {canSelectDepartment ? (
                     <select
                       value={formData.department || ''}
                       onChange={(e) => handleInputChange('department', e.target.value)}

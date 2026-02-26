@@ -27,7 +27,7 @@ export interface Employee {
   companyName?: string;
   email?: string;
   passwordHash?: string;
-  role?: 'operator' | 'manager' | 'user';
+  role?: 'operator' | 'company_manager' | 'manager' | 'user';
   createdAt?: string;
   updatedAt?: string;
 }

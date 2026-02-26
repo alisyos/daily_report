@@ -35,6 +35,8 @@ interface Employee {
 export default function MissionKPIList() {
   const { user } = useAuth();
   const isOperator = user?.role === 'operator';
+  const isCompanyManager = user?.role === 'company_manager';
+  const canSelectDepartment = isOperator || isCompanyManager;
   const isUser = user?.role === 'user';
 
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -90,10 +92,10 @@ export default function MissionKPIList() {
   }, []);
 
   useEffect(() => {
-    if (user && !isOperator && user.department) {
+    if (user && !canSelectDepartment && user.department) {
       setFilterDepartment(user.department);
     }
-  }, [user, isOperator]);
+  }, [user, canSelectDepartment]);
 
   // Reset assignee filter when department changes
   useEffect(() => {
@@ -164,7 +166,7 @@ export default function MissionKPIList() {
   const openAddMission = () => {
     setEditingMission(null);
     const defaultAssignee = isUser ? (user?.employeeName || '') : '';
-    const defaultDept = !isOperator && user?.department ? user.department : '';
+    const defaultDept = !canSelectDepartment && user?.department ? user.department : '';
     setMissionForm({
       missionName: '',
       description: '',
@@ -340,7 +342,7 @@ export default function MissionKPIList() {
   };
 
   // Employees available for the modal assignee select (filtered by modal's department context)
-  const modalEmployees = isOperator
+  const modalEmployees = canSelectDepartment
     ? (missionForm.department ? employees.filter(e => e.department === missionForm.department) : employees)
     : employees.filter(e => e.department === user?.department);
 
@@ -357,7 +359,7 @@ export default function MissionKPIList() {
       <div className="bg-white rounded-lg shadow-md p-4">
         {/* Filter bar */}
         <div className="flex flex-col md:flex-row gap-3 mb-4">
-          {isOperator && (
+          {canSelectDepartment && (
             <div className="flex-1">
               <label htmlFor="filterDept" className="block text-sm font-medium text-gray-700 mb-1">부서 필터</label>
               <select
@@ -400,7 +402,7 @@ export default function MissionKPIList() {
           <div className="flex items-end gap-2">
             <button
               onClick={() => {
-                if (isOperator) setFilterDepartment('');
+                if (canSelectDepartment) setFilterDepartment('');
                 setFilterAssignee('');
                 setFilterStatus('');
               }}
@@ -741,12 +743,23 @@ export default function MissionKPIList() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">부서</label>
-                  <input
-                    type="text"
-                    value={missionForm.department}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 cursor-not-allowed"
-                  />
+                  {canSelectDepartment ? (
+                    <select
+                      value={missionForm.department}
+                      onChange={(e) => setMissionForm({ ...missionForm, department: e.target.value, assignee: '' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                    >
+                      <option value="">부서 선택</option>
+                      {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={missionForm.department}
+                      readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 cursor-not-allowed"
+                    />
+                  )}
                 </div>
               </div>
 

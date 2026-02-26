@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!requireRole(user, 'operator', 'manager')) {
+    if (!requireRole(user, 'operator', 'company_manager', 'manager')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -25,12 +25,16 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // Only operator can add departments
-    if (!requireRole(user, 'operator')) {
-      return NextResponse.json({ error: '부서 추가는 운영자만 가능합니다.' }, { status: 403 });
+    if (!requireRole(user, 'operator', 'company_manager')) {
+      return NextResponse.json({ error: '부서 추가는 운영자 또는 회사 관리자만 가능합니다.' }, { status: 403 });
     }
 
     const departmentData = await request.json();
+
+    // company_manager는 자사 companyId 강제
+    if (user.role === 'company_manager') {
+      departmentData.companyId = user.companyId;
+    }
 
     if (!departmentData.departmentName || !departmentData.companyId) {
       return NextResponse.json({ error: '부서명과 업체를 입력해주세요.' }, { status: 400 });
@@ -53,9 +57,8 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // Only operator can update departments
-    if (!requireRole(user, 'operator')) {
-      return NextResponse.json({ error: '부서 수정은 운영자만 가능합니다.' }, { status: 403 });
+    if (!requireRole(user, 'operator', 'company_manager')) {
+      return NextResponse.json({ error: '부서 수정은 운영자 또는 회사 관리자만 가능합니다.' }, { status: 403 });
     }
 
     const { id, department } = await request.json();
@@ -66,6 +69,14 @@ export async function PUT(request: NextRequest) {
 
     if (!department.departmentName) {
       return NextResponse.json({ error: '부서명을 입력해주세요.' }, { status: 400 });
+    }
+
+    // company_manager는 자사 부서만 수정 가능
+    if (user.role === 'company_manager') {
+      const existing = await dbService.getDepartmentById(id);
+      if (!existing || existing.companyId !== user.companyId) {
+        return NextResponse.json({ error: '자사 부서만 수정할 수 있습니다.' }, { status: 403 });
+      }
     }
 
     const success = await dbService.updateDepartment(id, department);
@@ -85,15 +96,22 @@ export async function DELETE(request: NextRequest) {
   try {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // Only operator can delete departments
-    if (!requireRole(user, 'operator')) {
-      return NextResponse.json({ error: '부서 삭제는 운영자만 가능합니다.' }, { status: 403 });
+    if (!requireRole(user, 'operator', 'company_manager')) {
+      return NextResponse.json({ error: '부서 삭제는 운영자 또는 회사 관리자만 가능합니다.' }, { status: 403 });
     }
 
     const { id } = await request.json();
 
     if (!id) {
       return NextResponse.json({ error: 'Missing department id' }, { status: 400 });
+    }
+
+    // company_manager는 자사 부서만 삭제 가능
+    if (user.role === 'company_manager') {
+      const existing = await dbService.getDepartmentById(id);
+      if (!existing || existing.companyId !== user.companyId) {
+        return NextResponse.json({ error: '자사 부서만 삭제할 수 있습니다.' }, { status: 403 });
+      }
     }
 
     const success = await dbService.deleteDepartment(id);

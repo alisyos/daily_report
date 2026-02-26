@@ -9,12 +9,12 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!requireRole(user, 'operator', 'manager')) {
+    if (!requireRole(user, 'operator', 'company_manager', 'manager')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const companyId = getCompanyScope(user);
-    // Manager can only see employees in their own department
+    // Manager can only see employees in their own department; company_manager sees all departments in their company
     const department = user.role === 'manager' ? user.department : undefined;
     const employees = await dbService.getEmployees(companyId, department);
     // Strip password hashes from response
@@ -31,14 +31,31 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!requireRole(user, 'operator', 'manager')) {
+    if (!requireRole(user, 'operator', 'company_manager', 'manager')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const employeeData = await request.json();
 
-    if (!employeeData.employeeCode || !employeeData.employeeName || !employeeData.department) {
+    if (!employeeData.employeeCode || !employeeData.employeeName) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Role-based required field validation
+    const targetRole = employeeData.role || 'user';
+    const needsCompany = targetRole !== 'operator';
+    const needsDepartment = targetRole === 'manager' || targetRole === 'user';
+
+    if (needsCompany && !employeeData.companyId && user.role === 'operator') {
+      return NextResponse.json({ error: '업체를 선택해주세요.' }, { status: 400 });
+    }
+    if (needsDepartment && !employeeData.department) {
+      return NextResponse.json({ error: '부서를 선택해주세요.' }, { status: 400 });
+    }
+
+    // company_manager can add to any department in their company
+    if (user.role === 'company_manager') {
+      employeeData.companyId = user.companyId;
     }
 
     // Manager can only add to their own company and department
@@ -70,7 +87,7 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!requireRole(user, 'operator', 'manager')) {
+    if (!requireRole(user, 'operator', 'company_manager', 'manager')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -78,6 +95,28 @@ export async function PUT(request: NextRequest) {
 
     if (!id || !employee) {
       return NextResponse.json({ error: 'Missing id or employee data' }, { status: 400 });
+    }
+
+    // Role-based required field validation
+    const targetRole = employee.role || 'user';
+    const needsCompany = targetRole !== 'operator';
+    const needsDepartment = targetRole === 'manager' || targetRole === 'user';
+
+    if (needsCompany && !employee.companyId && user.role === 'operator') {
+      return NextResponse.json({ error: '업체를 선택해주세요.' }, { status: 400 });
+    }
+    if (needsDepartment && !employee.department) {
+      return NextResponse.json({ error: '부서를 선택해주세요.' }, { status: 400 });
+    }
+
+    // company_manager can edit any employee in their company
+    if (user.role === 'company_manager') {
+      const employees = await dbService.getEmployees(user.companyId);
+      const targetEmployee = employees.find(e => e.id === id);
+      if (!targetEmployee) {
+        return NextResponse.json({ error: '자사 사원만 수정할 수 있습니다.' }, { status: 403 });
+      }
+      employee.companyId = user.companyId;
     }
 
     // Manager can only edit within their own company and department
@@ -115,7 +154,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!requireRole(user, 'operator', 'manager')) {
+    if (!requireRole(user, 'operator', 'company_manager', 'manager')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -123,6 +162,15 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: 'Missing employee id' }, { status: 400 });
+    }
+
+    // company_manager can delete any employee in their company
+    if (user.role === 'company_manager') {
+      const employees = await dbService.getEmployees(user.companyId);
+      const targetEmployee = employees.find(e => e.id === id);
+      if (!targetEmployee) {
+        return NextResponse.json({ error: '자사 사원만 삭제할 수 있습니다.' }, { status: 403 });
+      }
     }
 
     // Manager can only delete employees in their own department

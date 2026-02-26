@@ -45,6 +45,7 @@ export default function ReportList() {
   const [departments, setDepartments] = useState<string[]>([]);
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
   const isOperator = user?.role === 'operator';
+  const isCompanyManager = user?.role === 'company_manager';
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterEmployee, setFilterEmployee] = useState('');
   const [filterCompany, setFilterCompany] = useState('');
@@ -81,12 +82,12 @@ export default function ReportList() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 관리자/사용자는 본인 부서로 자동 고정
+  // 부서 관리자/사용자는 본인 부서로 자동 고정 (operator, company_manager는 자유)
   useEffect(() => {
-    if (user && !isOperator && user.department) {
+    if (user && !isOperator && !isCompanyManager && user.department) {
       setFilterDepartment(user.department);
     }
-  }, [user, isOperator]);
+  }, [user, isOperator, isCompanyManager]);
 
   useEffect(() => {
     if (filterDate) {
@@ -437,6 +438,7 @@ export default function ReportList() {
   const canEditSummary = (dept: string) => {
     if (!user) return false;
     if (user.role === 'operator') return true;
+    if (user.role === 'company_manager') return true; // 자사 전체 부서
     if (user.role === 'manager') return user.department === dept;
     // user role: 본인 부서만
     return user.department === dept;
@@ -802,7 +804,7 @@ export default function ReportList() {
               </select>
             </div>
           )}
-          {isOperator && (
+          {(isOperator || isCompanyManager) && (
             <div className="flex-1">
               <label htmlFor="filterDepartment" className="block text-sm font-medium text-gray-700 mb-1">
                 부서 필터
@@ -839,8 +841,10 @@ export default function ReportList() {
             <button
               onClick={() => {
                 setFilterDate('');
-                if (isOperator) {
+                if (isOperator || isCompanyManager) {
                   setFilterDepartment('');
+                }
+                if (isOperator) {
                   setFilterCompany('');
                 }
                 setFilterEmployee('');
@@ -1157,7 +1161,7 @@ export default function ReportList() {
             </div>
 
             <div className="flex justify-between mt-6">
-              {user && (user.role === 'operator' || user.role === 'manager') && (
+              {user && (user.role === 'operator' || user.role === 'company_manager' || user.role === 'manager') && (
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"

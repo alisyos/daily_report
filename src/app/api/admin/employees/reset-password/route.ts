@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!requireRole(user, 'operator', 'manager')) {
+    if (!requireRole(user, 'operator', 'company_manager', 'manager')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

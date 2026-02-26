@@ -132,8 +132,8 @@ export async function DELETE(request: NextRequest) {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Only operator and manager can delete reports
-    if (!requireRole(user, 'operator', 'manager')) {
+    // Only operator, company_manager and manager can delete reports
+    if (!requireRole(user, 'operator', 'company_manager', 'manager')) {
       return NextResponse.json({ error: '보고서 삭제 권한이 없습니다.' }, { status: 403 });
     }
 

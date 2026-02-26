@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+
 import Login from "@/components/Login";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -111,9 +111,9 @@ export default function ClientLayout({
     return <Login />;
   }
 
-  const isAdminVisible = user.role === 'operator' || user.role === 'manager';
+  const isAdminVisible = user.role === 'operator' || user.role === 'company_manager' || user.role === 'manager';
 
-  const roleLabel = user.role === 'operator' ? '운영자' : user.role === 'manager' ? '관리자' : '사용자';
+  const roleLabel = user.role === 'operator' ? '운영자' : user.role === 'company_manager' ? '회사 관리자' : user.role === 'manager' ? '부서 관리자' : '사용자';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -121,16 +121,10 @@ export default function ClientLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-              <div className="flex items-center justify-center h-9">
-                <Image
-                  src="/logo.png"
-                  alt="로고"
-                  width={90}
-                  height={36}
-                  className="object-contain h-full w-auto"
-                />
-              </div>
-              <span className="text-xl font-bold text-gray-900 leading-none mt-1.5">
+              <span className="text-xl font-bold text-gray-900">
+                {user.companyName || '업무 보고 시스템'}
+              </span>
+              <span className="text-xl font-bold text-gray-900">
                 ㅣ 업무 보고 시스템
               </span>
             </Link>
@@ -138,10 +132,9 @@ export default function ClientLayout({
               <div className="text-sm text-gray-600">
                 <span className="font-medium text-gray-900">{user.employeeName}</span>
                 <span className="mx-1">|</span>
-                <span>{user.companyName}</span>
-                <span className="mx-1">|</span>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                   user.role === 'operator' ? 'bg-red-100 text-red-700' :
+                  user.role === 'company_manager' ? 'bg-purple-100 text-purple-700' :
                   user.role === 'manager' ? 'bg-blue-100 text-blue-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>

@@ -6,7 +6,7 @@ export interface AuthUser {
   id: string;
   email: string;
   employeeName: string;
-  role: 'operator' | 'manager' | 'user';
+  role: 'operator' | 'company_manager' | 'manager' | 'user';
   companyId: string;
   companyName: string;
   department: string;
