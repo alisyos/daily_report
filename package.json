@@ -10,12 +10,14 @@
     "lint": "next lint",
     "migrate": "tsx scripts/migrate-data.ts",
     "migrate:summaries": "tsx scripts/migrate-summaries.ts",
-    "setup-auth": "tsx scripts/setup-auth.ts"
+    "setup-auth": "tsx scripts/setup-auth.ts",
+    "generate-docx": "tsx scripts/generate-docx.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.83.0",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
+    "docx": "^9.6.0",
     "dotenv": "^17.2.3",
     "googleapis": "^152.0.0",
     "jose": "^6.1.3",
